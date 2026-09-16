@@ -1,0 +1,109 @@
+.game {
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.game-room {
+  display: flex;
+  flex-direction: column;
+}
+
+.game-room-label {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.game-room-code {
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+}
+
+.game-turn-status {
+  color: var(--turn);
+  font-weight: 700;
+}
+
+.game-leave {
+  color: var(--danger);
+  border-color: rgba(255, 107, 107, 0.45);
+  background: transparent;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+.game-players {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.game-board-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.game-result {
+  background: rgba(255, 209, 102, 0.12);
+  border: 1px solid var(--turn);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  text-align: center;
+  font-size: 1.05rem;
+}
+
+.game-result strong {
+  color: var(--turn);
+}
+
+.game-error {
+  text-align: center;
+}
+
+.game-hand-area {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.game-side-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--text-dim);
+}
+
+.game-side-picker strong {
+  color: var(--turn);
+}
+
+.game-side-picker button.primary {
+  background: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .game-players {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

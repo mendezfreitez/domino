@@ -1,0 +1,17 @@
+.player-hand {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-width: 100%;
+  padding: 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  min-height: 164px;
+  align-content: flex-start;
+}
+
+.player-hand:has(.domino-tile) {
+  align-items: flex-start;
+}

@@ -1,0 +1,61 @@
+.player-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.player-card.current {
+  border-color: var(--turn);
+  box-shadow: 0 0 0 2px rgba(255, 209, 102, 0.3);
+}
+
+.player-card.you {
+  outline: 1px solid var(--accent);
+}
+
+.player-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.player-pos {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.player-turn {
+  background: rgba(255, 209, 102, 0.15);
+  color: var(--turn);
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  white-space: nowrap;
+}
+
+.player-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-name em {
+  color: var(--text-dim);
+  font-style: normal;
+  font-size: 0.85rem;
+}
+
+.player-tiles {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}

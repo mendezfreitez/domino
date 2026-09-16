@@ -1,0 +1,85 @@
+.domino-tile {
+  display: block;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+  transition: transform 0.08s ease, box-shadow 0.15s ease;
+}
+
+.domino-tile.size-hand.orientation-vertical {
+  width: 66px;
+  height: 132px;
+}
+
+.domino-tile.size-hand.orientation-horizontal {
+  width: 132px;
+  height: 66px;
+}
+
+.domino-tile.size-board.orientation-horizontal {
+  width: 128px;
+  height: 64px;
+}
+
+.domino-tile.size-board.orientation-vertical {
+  width: 64px;
+  height: 128px;
+}
+
+.domino-tile .tile-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tile-face {
+  fill: var(--tile-bg);
+  stroke: #d8cfb6;
+  stroke-width: 2;
+  transition: stroke 0.15s ease;
+}
+
+.tile-divider {
+  stroke: #d8cfb6;
+  stroke-width: 2;
+}
+
+.tile-pip {
+  fill: var(--tile-dot);
+}
+
+.domino-tile.clickable {
+  cursor: pointer;
+}
+
+.domino-tile.clickable:hover:not(:disabled) {
+  transform: translateY(-6px);
+}
+
+.domino-tile.clickable:hover:not(:disabled) .tile-face {
+  stroke: var(--accent);
+}
+
+.domino-tile.playable {
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 3px 8px rgba(0, 0, 0, 0.35);
+}
+
+.domino-tile.playable .tile-face {
+  stroke: var(--accent);
+}
+
+.domino-tile.selected {
+  transform: translateY(-8px);
+  box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.35), 0 3px 8px rgba(0, 0, 0, 0.35);
+}
+
+.domino-tile.selected .tile-face {
+  stroke: var(--turn);
+}
+
+.domino-tile.disabled {
+  opacity: 0.6;
+}

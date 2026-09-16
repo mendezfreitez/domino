@@ -1,0 +1,125 @@
+.lobby {
+  max-width: 520px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  flex: 1;
+}
+
+.lobby-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.lobby-title {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.lobby-hint {
+  margin: 0.3rem 0 0;
+  color: var(--text-dim);
+  font-size: 0.95rem;
+}
+
+.lobby-leave {
+  color: var(--danger);
+  border-color: rgba(255, 107, 107, 0.45);
+  background: transparent;
+}
+
+.lobby-code-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--bg-panel);
+  border: 1px dashed var(--accent);
+  border-radius: 14px;
+  padding: 1.25rem;
+}
+
+.lobby-code-label {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.lobby-code {
+  font-size: 2.4rem;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.lobby-count {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+}
+
+.lobby-players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.lobby-player {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+}
+
+.lobby-player.occupied {
+  border-color: var(--accent-soft);
+}
+
+.lobby-player.you {
+  outline: 1px solid var(--accent);
+}
+
+.lobby-player-pos {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  min-width: 5.5rem;
+}
+
+.lobby-player-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.lobby-player.occupied .lobby-player-name {
+  color: var(--text);
+}
+
+.lobby-player-you {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.lobby-waiting {
+  text-align: center;
+  color: var(--text-dim);
+  margin: 0.25rem 0 0;
+}
+
+.lobby-start {
+  font-size: 1.05rem;
+}

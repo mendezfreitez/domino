@@ -1,0 +1,46 @@
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+  min-height: 0;
+}
+
+.board-ends {
+  display: flex;
+  gap: 1.25rem;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.board-ends strong {
+  color: var(--accent);
+  font-size: 1.05rem;
+}
+
+.board-track {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 12px 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  min-height: 152px;
+  scrollbar-width: thin;
+}
+
+.board-track::-webkit-scrollbar {
+  height: 8px;
+}
+
+.board-empty p {
+  color: var(--text-dim);
+  margin: 0;
+  padding: 2rem;
+  background: var(--bg-panel);
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+}
