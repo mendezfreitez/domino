@@ -43,32 +43,30 @@ interface TileSvgProps {
 
 function TileSvg({ left, right, orientation }: TileSvgProps) {
   const vertical = orientation === "vertical";
-  const width = vertical ? HALF : HALF * 2;
-  const height = vertical ? HALF * 2 : HALF;
-
-  const rightX = vertical ? 0 : HALF;
-  const rightY = vertical ? HALF : 0;
+  const viewWidth = vertical ? HALF : HALF * 2;
+  const viewHeight = vertical ? HALF * 2 : HALF;
+  const transform = vertical ? undefined : `rotate(-90) translate(${-HALF} 0)`;
 
   return (
     <svg
       className="tile-svg"
-      viewBox={`0 0 ${width} ${height}`}
+      viewBox={`0 0 ${viewWidth} ${viewHeight}`}
       preserveAspectRatio="none"
       focusable="false"
       aria-hidden="true"
     >
-      <rect
-        className="tile-face"
-        x="1"
-        y="1"
-        width={width - 2}
-        height={height - 2}
-        rx="10"
-        ry="10"
-      />
-      <PipHalf value={left} x={0} y={0} />
-      <PipHalf value={right} x={rightX} y={rightY} />
-      {vertical ? (
+      <g transform={transform}>
+        <rect
+          className="tile-face"
+          x="1"
+          y="1"
+          width={HALF - 2}
+          height={HALF * 2 - 2}
+          rx="10"
+          ry="10"
+        />
+        <PipHalf value={left} x={0} y={0} />
+        <PipHalf value={right} x={0} y={HALF} />
         <line
           className="tile-divider"
           x1={DIVIDER_INSET}
@@ -76,15 +74,7 @@ function TileSvg({ left, right, orientation }: TileSvgProps) {
           x2={HALF - DIVIDER_INSET}
           y2={HALF}
         />
-      ) : (
-        <line
-          className="tile-divider"
-          x1={HALF}
-          y1={DIVIDER_INSET}
-          x2={HALF}
-          y2={HALF - DIVIDER_INSET}
-        />
-      )}
+      </g>
     </svg>
   );
 }
