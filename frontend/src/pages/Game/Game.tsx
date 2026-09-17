@@ -1,5 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import { useMemo, useState } from "react";
 import { Board } from "../../components/Board/Board";
 import { Player } from "../../components/Player/Player";
 import { PlayerHand } from "../../components/PlayerHand/PlayerHand";
@@ -17,10 +16,6 @@ interface GameProps {
   onLeave: () => void;
 }
 
-const DESIGN_WIDTH = 1280;
-const MIN_SCALE = 0.5;
-const MAX_SCALE = 1.15;
-
 export function Game({
   state,
   result,
@@ -31,36 +26,6 @@ export function Game({
   onLeave,
 }: GameProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const wrapRef = useRef<HTMLDivElement | null>(null);
-  const gameRef = useRef<HTMLDivElement | null>(null);
-  const [scale, setScale] = useState<number>(1);
-
-  useLayoutEffect(() => {
-    const wrap = wrapRef.current;
-    const game = gameRef.current;
-    if (!wrap || !game) return;
-
-    const recompute = () => {
-      const availW = wrap.clientWidth;
-      const availH = wrap.clientHeight;
-      const gameH = game.offsetHeight;
-      if (availW <= 0 || availH <= 0 || gameH <= 0) return;
-      const next = Math.min(
-        Math.max(Math.min(availW / DESIGN_WIDTH, availH / gameH), MIN_SCALE),
-        MAX_SCALE
-      );
-      setScale(next);
-    };
-
-    recompute();
-    const observer = new ResizeObserver(recompute);
-    observer.observe(game);
-    window.addEventListener("resize", recompute);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", recompute);
-    };
-  }, []);
 
   const youId = state.yourPlayerId;
   const isYourTurn =
@@ -127,12 +92,7 @@ export function Game({
   const isFinished = state.status === "finished";
 
   return (
-    <div className="game-wrap" ref={wrapRef}>
-      <div
-        className="game"
-        ref={gameRef}
-        style={{ "--scale": scale } as CSSProperties}
-      >
+    <div className="game">
       <header className="game-header">
         <div className="game-room">
           <span className="game-room-label">Sala</span>
@@ -216,8 +176,6 @@ export function Game({
           </div>
         )}
       </section>
-
-      </div>
 
       {lastPass && (
         <div className="pass-modal-overlay">
