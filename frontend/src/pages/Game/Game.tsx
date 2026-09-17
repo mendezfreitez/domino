@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Board } from "../../components/Board/Board";
 import { Player } from "../../components/Player/Player";
 import { PlayerHand } from "../../components/PlayerHand/PlayerHand";
-import { teamName } from "../../types/Player";
+import { teamName, type Player as PlayerType } from "../../types/Player";
 import type { GameFinishedPayload, PublicGameState } from "../../types/Game";
 import "./Game.css";
 
@@ -70,6 +70,25 @@ export function Game({
   const winnerTeam = result?.winnerTeam ?? state.winnerTeam;
   const winnerTeamLabel = winnerTeam !== null ? teamName(winnerTeam) : null;
 
+  const youSeat = state.players.find((p) => p.id === youId) ?? state.players[0];
+  const seatAt = (offset: number): PlayerType | undefined =>
+    state.players.find(
+      (p) => (p.position - youSeat.position + 4) % 4 === offset
+    );
+
+  // Asientos en sentido antihorario desde tu posición (abajo):
+  // 0 = tú (abajo), 1 = rival (izquierda = siguiente turno),
+  // 2 = compañero (enfrente), 3 = rival (derecha).
+  const seatCards = [
+    { className: "game-seat-top", player: seatAt(2) },
+    { className: "game-seat-left", player: seatAt(1) },
+    { className: "game-seat-right", player: seatAt(3) },
+    { className: "game-seat-bottom", player: seatAt(0) },
+  ].filter(
+    (seat): seat is { className: string; player: PlayerType } =>
+      seat.player !== undefined
+  );
+
   const finishedReason = result?.winnerReason ?? state.winnerReason;
   const isFinished = state.status === "finished";
 
@@ -92,35 +111,35 @@ export function Game({
         </button>
       </header>
 
-      <section className="game-players">
-        {[0, 1].map((team) => (
-          <div key={team} className={`game-team team-${team}`}>
-            <h3 className="game-team-title">
-              {teamName(team)}
-              <span className="game-team-pips">
-                {state.teamPips?.[String(team)] ?? 0} pts
-              </span>
-            </h3>
-            <div className="game-team-members">
-              {state.players
-                .filter((player) => player.team === team)
-                .map((player) => (
-                  <Player
-                    key={player.id}
-                    player={player}
-                    isYou={player.id === youId}
-                    isCurrent={player.id === state.currentPlayer}
-                    tileCount={state.handCounts[player.id] ?? 0}
-                  />
-                ))}
-            </div>
+      <section className="game-table">
+        {seatCards.map(({ className, player }) => (
+          <div
+            key={player.id}
+            className={`game-seat ${className} team-${player.team}`}
+          >
+            <span className={`game-team-badge team-${player.team}`}>
+              {teamName(player.team)}
+            </span>
+            <Player
+              player={player}
+              isYou={player.id === youId}
+              isCurrent={player.id === state.currentPlayer}
+              tileCount={state.handCounts[player.id] ?? 0}
+            />
           </div>
         ))}
+        <main className="game-board-center">
+          <Board tiles={state.board} />
+        </main>
       </section>
 
-      <main className="game-board-area">
-        <Board tiles={state.board} />
-      </main>
+      <div className="game-teams">
+        {[0, 1].map((team) => (
+          <span key={team} className={`game-team-pill team-${team}`}>
+            {teamName(team)} · {state.teamPips?.[String(team)] ?? 0} pts
+          </span>
+        ))}
+      </div>
 
       {isFinished && (
         <div className="game-result">

@@ -48,57 +48,97 @@
   font-size: 0.9rem;
 }
 
-.game-players {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.9rem;
-}
-
-.game-team {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 0.75rem;
-}
-
-.game-team.team-0 {
-  border-top: 3px solid var(--accent);
-}
-
-.game-team.team-1 {
-  border-top: 3px solid var(--turn);
-}
-
-.game-team-title {
-  margin: 0;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-size: 1rem;
-}
-
-.game-team-pips {
-  color: var(--text-dim);
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.game-team-members {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.6rem;
-}
-
-.game-board-area {
+.game-table {
   flex: 1;
   min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(104px, 180px) minmax(0, 1fr) minmax(104px, 180px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.game-seat {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  justify-self: center;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.game-seat-top {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.game-seat-left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.game-seat-right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.game-seat-bottom {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.game-team-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.12rem 0.6rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.game-team-badge.team-0 {
+  color: var(--accent);
+  background: rgba(79, 156, 246, 0.15);
+}
+
+.game-team-badge.team-1 {
+  color: var(--turn);
+  background: rgba(255, 209, 102, 0.15);
+}
+
+.game-board-center {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  overflow: auto;
+}
+
+.game-teams {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.game-team-pill {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+
+.game-team-pill.team-0 {
+  color: var(--accent);
+}
+
+.game-team-pill.team-1 {
+  color: var(--turn);
 }
 
 .game-result {
@@ -203,11 +243,7 @@
 }
 
 @media (max-width: 640px) {
-  .game-players {
-    grid-template-columns: 1fr;
-  }
-
-  .game-team-members {
-    grid-template-columns: 1fr 1fr;
+  .game-table {
+    grid-template-columns: minmax(88px, 140px) minmax(0, 1fr) minmax(88px, 140px);
   }
 }
