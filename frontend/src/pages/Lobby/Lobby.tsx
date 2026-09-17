@@ -1,5 +1,12 @@
-import { emitStartGame } from "../../services/socket";
+import { useState } from "react";
+import type { DragEvent } from "react";
+import {
+  emitMovePlayer,
+  emitStartGame,
+  emitSwapPlayers,
+} from "../../services/socket";
 import type { Player } from "../../types/Player";
+import { teamName } from "../../types/Player";
 import "./Lobby.css";
 
 interface LobbyProps {
@@ -10,19 +17,73 @@ interface LobbyProps {
   onLeave: () => void;
 }
 
-const EMPTY_SLOT = { id: "", name: "Esperando jugador…", position: -1 };
+const TEAMS = [0, 1];
+const PLAYERS_PER_TEAM = 2;
 
 export function Lobby({ roomId, players, playerId, error, onLeave }: LobbyProps) {
-  const slots: Player[] = [];
-  for (let i = 0; i < 4; i++) {
-    slots.push(players.find((p) => p.position === i) ?? { ...EMPTY_SLOT, position: i });
-  }
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+
+  const membersOf = (team: number): (Player | null)[] => {
+    const members = players.filter((p) => p.team === team);
+    return Array.from(
+      { length: PLAYERS_PER_TEAM },
+      (_, index) => members[index] ?? null
+    );
+  };
+
+  const teamCount = (team: number) =>
+    players.filter((p) => p.team === team).length;
 
   const isHost = players[0]?.id === playerId;
-  const full = players.length === 4;
+  const balanced =
+    players.length === PLAYERS_PER_TEAM * TEAMS.length &&
+    TEAMS.every((team) => teamCount(team) === PLAYERS_PER_TEAM);
 
   const handleStart = () => {
-    if (isHost && full) emitStartGame();
+    if (isHost && balanced) emitStartGame();
+  };
+
+  const handleDragStart = (event: DragEvent<HTMLLIElement>, player: Player) => {
+    if (!isHost) return;
+    setDraggingId(player.id);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", player.id);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingId(null);
+    setDragOverKey(null);
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLLIElement>, key: string) => {
+    if (!isHost || !draggingId) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    if (dragOverKey !== key) setDragOverKey(key);
+  };
+
+  const handleDrop = (
+    event: DragEvent<HTMLLIElement>,
+    targetTeam: number,
+    target: Player | null
+  ) => {
+    event.preventDefault();
+    const draggedId = draggingId ?? event.dataTransfer.getData("text/plain");
+    handleDragEnd();
+    if (!isHost || !draggedId) return;
+
+    const dragged = players.find((p) => p.id === draggedId);
+    if (!dragged) return;
+
+    if (target) {
+      if (target.id === dragged.id || target.team === dragged.team) return;
+      emitSwapPlayers(dragged.id, target.id);
+      return;
+    }
+
+    if (dragged.team === targetTeam) return;
+    emitMovePlayer(dragged.id, targetTeam);
   };
 
   return (
@@ -31,7 +92,7 @@ export function Lobby({ roomId, players, playerId, error, onLeave }: LobbyProps)
         <div>
           <h2 className="lobby-title">Sala lista</h2>
           <p className="lobby-hint">
-            Comparte el código con 3 amigos para comenzar
+            Comparte el código con 3 amigos: 2 vs 2 para comenzar
           </p>
         </div>
         <button className="lobby-leave" onClick={onLeave}>
@@ -43,45 +104,93 @@ export function Lobby({ roomId, players, playerId, error, onLeave }: LobbyProps)
         <span className="lobby-code-label">Código de sala</span>
         <span className="lobby-code">{roomId}</span>
         <span className="lobby-count">
-          {players.length} / 4 jugadores
+          {players.length} / {PLAYERS_PER_TEAM * TEAMS.length} jugadores
         </span>
       </section>
 
-      <ul className="lobby-players">
-        {slots.map((slot) => {
-          const occupied = slot.id !== "";
-          const isYou = slot.id === playerId;
-          return (
-            <li
-              key={slot.position}
-              className={`lobby-player ${occupied ? "occupied" : ""} ${
-                isYou ? "you" : ""
-              }`}
-            >
-              <span className="lobby-player-pos">Jugador {slot.position + 1}</span>
-              <span className="lobby-player-name">
-                {occupied ? slot.name : "—"}
+      <div className="lobby-teams">
+        {TEAMS.map((team) => (
+          <section key={team} className={`lobby-team team-${team}`}>
+            <header className="lobby-team-header">
+              <span className="lobby-team-title">{teamName(team)}</span>
+              <span className="lobby-team-count">
+                {teamCount(team)} / {PLAYERS_PER_TEAM}
               </span>
-              {isYou && <span className="lobby-player-you">Tú</span>}
-            </li>
-          );
-        })}
-      </ul>
+            </header>
+            <ul className="lobby-team-players">
+              {membersOf(team).map((slot, index) => {
+                const key = `${team}-${index}`;
+                const occupied = slot !== null;
+                const isYou = slot?.id === playerId;
+                const isDragging = slot !== null && slot.id === draggingId;
+                const isDropTarget = dragOverKey === key;
+                return (
+                  <li
+                    key={key}
+                    className={[
+                      "lobby-player",
+                      occupied ? "occupied" : "",
+                      isYou ? "you" : "",
+                      isHost && occupied ? "draggable" : "",
+                      isDragging ? "dragging" : "",
+                      isDropTarget ? "drop-target" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    draggable={isHost && occupied}
+                    onDragStart={(event) =>
+                      slot && handleDragStart(event, slot)
+                    }
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(event) => handleDragOver(event, key)}
+                    onDragLeave={() =>
+                      setDragOverKey((current) =>
+                        current === key ? null : current
+                      )
+                    }
+                    onDrop={(event) => handleDrop(event, team, slot)}
+                  >
+                    {slot ? (
+                      <span className="lobby-player-name">
+                        {slot.name}
+                        {isYou && <em> (tú)</em>}
+                      </span>
+                    ) : (
+                      <span className="lobby-player-empty">
+                        Esperando jugador…
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
 
       {error && <div className="error-banner">{error}</div>}
 
-      {full ? (
+      {balanced ? (
         isHost ? (
           <button className="primary lobby-start" onClick={handleStart}>
             Iniciar partida
           </button>
         ) : (
           <p className="lobby-waiting">
-            Sala completa. El creador iniciará la partida…
+            Todo listo. El anfitrión iniciará la partida…
           </p>
         )
       ) : (
-        <p className="lobby-waiting">Esperando jugadores…</p>
+        <p className="lobby-waiting">
+          Se necesitan 2 jugadores en cada equipo para iniciar.
+        </p>
+      )}
+
+      {isHost && (
+        <p className="lobby-tip">
+          Arrastra un jugador sobre otro del equipo contrario para
+          intercambiarlos.
+        </p>
       )}
     </div>
   );

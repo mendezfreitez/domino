@@ -132,6 +132,16 @@ async function main(): Promise<void> {
       sessions[i].playerId = joined.playerId;
       sessions[i].roomId = joined.roomId;
       assert(joined.position === i, `el jugador ${i} obtiene la posición ${i}`);
+
+      if (i === 1) {
+        const early = onceEvent(c1, "invalid_move") as Promise<{ message: string }>;
+        c1.emit("start_game");
+        const earlyMsg = await early;
+        assert(
+          earlyMsg.message.includes("4 jugadores"),
+          "el anfitrión no puede iniciar con menos de 4 jugadores"
+        );
+      }
     }
 
     assert(
@@ -139,8 +149,40 @@ async function main(): Promise<void> {
       "los 4 jugadores están en la misma sala"
     );
 
-    console.log("--- Inicio automático de partida ---");
+    console.log("--- Intercambio de equipos (anfitrión) ---");
 
+    await wait(150);
+    const swapUpdated = onceEvent(c1, "room_updated") as Promise<{
+      players: { id: string; team: number }[];
+    }>;
+    c1.emit("swap_players", {
+      playerIdA: sessions[0].playerId,
+      playerIdB: sessions[1].playerId,
+    });
+    const swapped = await swapUpdated;
+    const teamOf = (id: string) =>
+      swapped.players.find((p) => p.id === id)?.team;
+    assert(
+      teamOf(sessions[0].playerId) === 1 && teamOf(sessions[1].playerId) === 0,
+      "el anfitrión intercambia dos jugadores de equipos distintos"
+    );
+
+    const swapDenied = onceEvent(sessions[1].client, "invalid_move") as Promise<{
+      message: string;
+    }>;
+    sessions[1].client.emit("swap_players", {
+      playerIdA: sessions[0].playerId,
+      playerIdB: sessions[2].playerId,
+    });
+    const denied = await swapDenied;
+    assert(
+      denied.message.includes("anfitrión"),
+      "solo el anfitrión puede intercambiar jugadores"
+    );
+
+    console.log("--- Inicio de partida (anfitrión, 2 vs 2) ---");
+
+    c1.emit("start_game");
     const started = await Promise.all(startedPromises);
     assert(started.length === 4, "los 4 jugadores reciben game_started");
 
@@ -163,6 +205,14 @@ async function main(): Promise<void> {
     }
 
     const firstState = sessions[0].state!;
+    assert(
+      firstState.players.filter((p) => p.team === 0).length === 2,
+      "el equipo 0 tiene exactamente 2 jugadores"
+    );
+    assert(
+      firstState.players.filter((p) => p.team === 1).length === 2,
+      "el equipo 1 tiene exactamente 2 jugadores"
+    );
     const current = sessions.find(
       (s) => s.playerId === firstState.currentPlayer
     )!;
@@ -253,8 +303,13 @@ async function main(): Promise<void> {
     };
     await joinRoom(x2, "Fer");
     await joinRoom(x3, "Gus");
-    const leftPromise = onceEvent(x3, "game_finished");
     await joinRoom(x4, "Hugo");
+
+    const started2 = onceEvent(x3, "game_started");
+    x1.emit("start_game");
+    await started2;
+
+    const leftPromise = onceEvent(x3, "game_finished");
     x1.disconnect();
     await leftPromise;
 

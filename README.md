@@ -1,6 +1,6 @@
 # Dominó Online (MVP)
 
-Juego de dominó **Double-Six** para **4 jugadores** en tiempo real, con servidor autoritativo basado en Node.js + Socket.IO y cliente React + TypeScript + Vite.
+Juego de dominó **Double-Six** para **4 jugadores en 2 vs 2** en tiempo real, con servidor autoritativo basado en Node.js + Socket.IO y cliente React + TypeScript + Vite.
 
 MVP definido según `SPEC.md`.
 
@@ -51,8 +51,9 @@ npm run dev        # http://localhost:5173
 1. Abre `http://localhost:5173` en 4 pestañas/navegadores (o dispositivos).
 2. El Jugador A pulsa **Crear partida** y comparte el código de 5 caracteres.
 3. Los demás pulsan **Unirse** e ingresan el código.
-4. Al completarse 4 jugadores la partida comienza automáticamente: 7 fichas por persona.
-5. Cada uno ve únicamente sus propias fichas; el estado del tablero se sincroniza en tiempo real.
+4. Al entrar, el servidor reparte a los jugadores en dos equipos equilibrados (2 y 2). El anfitrión puede **mover** jugadores entre los dos recuadros.
+5. Cuando hay 2 jugadores en cada equipo, el anfitrión pulsa **Iniciar partida**: 7 fichas por persona.
+6. Cada uno ve únicamente sus propias fichas; el estado del tablero se sincroniza en tiempo real. Gana el **equipo** del jugador que se descargue; si se bloquea, gana el equipo con menos puntos sumados.
 
 ### Jugar en red local (WiFi)
 
@@ -102,7 +103,7 @@ La mano de cada jugador se envía **solo** a ese jugador (`getPublicState`).
 ```bash
 cd backend
 npm test                # Game Engine: 48 aserciones
-npm run test:integration  # Salas + 4 jugadores + partida completa por Socket.IO
+npm run test:integration  # Salas + 2 vs 2 + partida completa por Socket.IO
 npm run typecheck
 ```
 

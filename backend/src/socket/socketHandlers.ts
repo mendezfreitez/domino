@@ -26,7 +26,7 @@ function broadcastGameState(io: Server, room: Room): void {
 function startGame(io: Server, roomManager: RoomManager, roomId: string): void {
   const room = roomManager.getRoom(roomId);
   if (!room || room.game || room.status !== "waiting") return;
-  if (room.players.length !== 4) return;
+  if (!roomManager.isBalanced(room)) return;
 
   room.game = new DominoGame(roomId, room.players);
   room.game.start();
@@ -41,6 +41,7 @@ function emitGameFinished(io: Server, room: Room): void {
   io.to(room.roomId).emit("game_finished", {
     roomId: room.roomId,
     winnerId: room.game?.state.winnerId ?? null,
+    winnerTeam: room.game?.state.winnerTeam ?? null,
     winnerReason: room.game?.state.winnerReason ?? null,
   });
 }
@@ -99,10 +100,6 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager): vo
       });
 
       emitRoomUpdated(io, result.room);
-
-      if (result.room.players.length === 4) {
-        startGame(io, roomManager, result.room.roomId);
-      }
     });
 
     socket.on("start_game", () => {
@@ -121,8 +118,67 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager): vo
         socket.emit("invalid_move", { message: "Se necesitan 4 jugadores para iniciar." });
         return;
       }
+      if (!roomManager.isBalanced(room)) {
+        socket.emit("invalid_move", {
+          message: "Debe haber 2 jugadores en cada equipo para iniciar.",
+        });
+        return;
+      }
 
       startGame(io, roomManager, roomId);
+    });
+
+    socket.on("move_player", (payload: unknown) => {
+      const roomId = session.roomId;
+      const playerId = session.playerId;
+      if (!roomId || !playerId) return;
+
+      const data = payload as { playerId?: string; team?: number } | null;
+      const targetPlayerId = data?.playerId ?? "";
+      const team = data?.team;
+
+      if (team !== 0 && team !== 1) {
+        socket.emit("invalid_move", { message: "Equipo inválido." });
+        return;
+      }
+
+      const result = roomManager.movePlayerToTeam(
+        roomId,
+        playerId,
+        targetPlayerId,
+        team
+      );
+      if (!result.ok) {
+        socket.emit("invalid_move", { message: result.error });
+        return;
+      }
+
+      emitRoomUpdated(io, result.room);
+    });
+
+    socket.on("swap_players", (payload: unknown) => {
+      const roomId = session.roomId;
+      const playerId = session.playerId;
+      if (!roomId || !playerId) return;
+
+      const data = payload as
+        | { playerIdA?: string; playerIdB?: string }
+        | null;
+      const playerIdA = data?.playerIdA ?? "";
+      const playerIdB = data?.playerIdB ?? "";
+
+      const result = roomManager.swapPlayers(
+        roomId,
+        playerId,
+        playerIdA,
+        playerIdB
+      );
+      if (!result.ok) {
+        socket.emit("invalid_move", { message: result.error });
+        return;
+      }
+
+      emitRoomUpdated(io, result.room);
     });
 
     socket.on("play_tile", (payload: unknown) => {

@@ -21,6 +21,14 @@ export function emitStartGame(): void {
   socket.emit("start_game");
 }
 
+export function emitMovePlayer(playerId: string, team: number): void {
+  socket.emit("move_player", { playerId, team });
+}
+
+export function emitSwapPlayers(playerIdA: string, playerIdB: string): void {
+  socket.emit("swap_players", { playerIdA, playerIdB });
+}
+
 export function emitPlayTile(payload: PlayTilePayload): void {
   socket.emit("play_tile", payload);
 }

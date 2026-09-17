@@ -8,6 +8,7 @@ export interface Player {
   id: string;
   name: string;
   position: number;
+  team: number;
 }
 
 export type GameStatus = "waiting" | "playing" | "finished";
@@ -22,6 +23,7 @@ export interface GameState {
   currentPlayer: string | null;
   status: GameStatus;
   winnerId: string | null;
+  winnerTeam: number | null;
   winnerReason: WinnerReason | null;
 }
 
@@ -32,10 +34,12 @@ export interface PublicGameState {
   currentPlayer: string | null;
   status: GameStatus;
   winnerId: string | null;
+  winnerTeam: number | null;
   winnerReason: WinnerReason | null;
   yourPlayerId: string;
   yourHand: DominoTile[];
   handCounts: Record<string, number>;
+  teamPips: Record<string, number>;
 }
 
 export type MoveResult =
@@ -45,3 +49,7 @@ export type MoveResult =
 export const MAX_PLAYERS = 4;
 
 export const TILES_PER_PLAYER = 7;
+
+export const TEAM_COUNT = 2;
+
+export const PLAYERS_PER_TEAM = 2;

@@ -50,8 +50,47 @@
 
 .game-players {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+}
+
+.game-team {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.75rem;
+}
+
+.game-team.team-0 {
+  border-top: 3px solid var(--accent);
+}
+
+.game-team.team-1 {
+  border-top: 3px solid var(--turn);
+}
+
+.game-team-title {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+
+.game-team-pips {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.game-team-members {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
 }
 
 .game-board-area {
@@ -104,6 +143,10 @@
 
 @media (max-width: 640px) {
   .game-players {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
+  }
+
+  .game-team-members {
+    grid-template-columns: 1fr 1fr;
   }
 }

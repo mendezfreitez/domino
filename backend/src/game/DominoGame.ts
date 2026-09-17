@@ -22,6 +22,7 @@ export class DominoGame {
       currentPlayer: null,
       status: "waiting",
       winnerId: null,
+      winnerTeam: null,
       winnerReason: null,
     };
   }
@@ -70,6 +71,7 @@ export class DominoGame {
     this.state.board = [];
     this.state.status = "playing";
     this.state.winnerId = null;
+    this.state.winnerTeam = null;
     this.state.winnerReason = null;
     this.state.currentPlayer = this.findStartingPlayer().id;
   }
@@ -150,8 +152,9 @@ export class DominoGame {
       }
     }
 
-    const winner = this.blockingWinner();
-    this.state.winnerId = winner.id;
+    const team = this.blockingWinnerTeam();
+    this.state.winnerTeam = team;
+    this.state.winnerId = this.bestPlayerInTeam(team);
     this.state.winnerReason = "blocked";
     this.state.status = "finished";
   }
@@ -162,13 +165,16 @@ export class DominoGame {
   }
 
   finishWithWinner(): void {
-    this.state.winnerId = this.state.currentPlayer;
+    const playerId = this.state.currentPlayer;
+    this.state.winnerId = playerId;
+    this.state.winnerTeam = playerId ? this.teamOf(playerId) : null;
     this.state.winnerReason = "empty-hand";
     this.state.status = "finished";
   }
 
   finishBecausePlayerLeft(): void {
     this.state.winnerId = null;
+    this.state.winnerTeam = null;
     this.state.winnerReason = "player-left";
     this.state.status = "finished";
   }
@@ -178,6 +184,11 @@ export class DominoGame {
     for (const player of this.state.players) {
       handCounts[player.id] = (this.state.hands[player.id] ?? []).length;
     }
+    const teamPips: Record<string, number> = {};
+    for (const player of this.state.players) {
+      const team = String(player.team);
+      teamPips[team] = (teamPips[team] ?? 0) + this.handPips(player.id);
+    }
     return {
       roomId: this.state.roomId,
       players: this.state.players,
@@ -185,10 +196,12 @@ export class DominoGame {
       currentPlayer: this.state.currentPlayer,
       status: this.state.status,
       winnerId: this.state.winnerId,
+      winnerTeam: this.state.winnerTeam,
       winnerReason: this.state.winnerReason,
       yourPlayerId: playerId,
       yourHand: this.state.hands[playerId] ?? [],
       handCounts,
+      teamPips,
     };
   }
 
@@ -260,16 +273,44 @@ export class DominoGame {
     );
   }
 
-  private blockingWinner(): Player {
-    let best = this.state.players[0];
+  private teamOf(playerId: string): number | null {
+    return this.state.players.find((p) => p.id === playerId)?.team ?? null;
+  }
+
+  private teamPips(team: number): number {
+    return this.state.players
+      .filter((p) => p.team === team)
+      .reduce((sum, p) => sum + this.handPips(p.id), 0);
+  }
+
+  private blockingWinnerTeam(): number {
+    const teams = [...new Set(this.state.players.map((p) => p.team))].sort(
+      (a, b) => a - b
+    );
+    let best = teams[0];
+    let bestPips = this.teamPips(best);
+    for (const team of teams.slice(1)) {
+      const pips = this.teamPips(team);
+      if (pips < bestPips) {
+        best = team;
+        bestPips = pips;
+      }
+    }
+    return best;
+  }
+
+  private bestPlayerInTeam(team: number): string | null {
+    const members = this.state.players.filter((p) => p.team === team);
+    if (members.length === 0) return null;
+    let best = members[0];
     let bestPips = this.handPips(best.id);
-    for (const player of this.state.players.slice(1)) {
+    for (const player of members.slice(1)) {
       const pips = this.handPips(player.id);
       if (pips < bestPips) {
         best = player;
         bestPips = pips;
       }
     }
-    return best;
+    return best.id;
   }
 }

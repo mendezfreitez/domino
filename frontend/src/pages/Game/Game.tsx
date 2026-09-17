@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Board } from "../../components/Board/Board";
 import { Player } from "../../components/Player/Player";
 import { PlayerHand } from "../../components/PlayerHand/PlayerHand";
+import { teamName } from "../../types/Player";
 import type { GameFinishedPayload, PublicGameState } from "../../types/Game";
 import "./Game.css";
 
@@ -55,6 +56,8 @@ export function Game({ state, result, error, onPlayTile, onLeave }: GameProps) {
 
   const currentPlayer = state.players.find((p) => p.id === state.currentPlayer);
   const winner = state.players.find((p) => p.id === (result?.winnerId ?? state.winnerId));
+  const winnerTeam = result?.winnerTeam ?? state.winnerTeam;
+  const winnerTeamLabel = winnerTeam !== null ? teamName(winnerTeam) : null;
 
   const finishedReason = result?.winnerReason ?? state.winnerReason;
   const isFinished = state.status === "finished";
@@ -79,14 +82,28 @@ export function Game({ state, result, error, onPlayTile, onLeave }: GameProps) {
       </header>
 
       <section className="game-players">
-        {state.players.map((player) => (
-          <Player
-            key={player.id}
-            player={player}
-            isYou={player.id === youId}
-            isCurrent={player.id === state.currentPlayer}
-            tileCount={state.handCounts[player.id] ?? 0}
-          />
+        {[0, 1].map((team) => (
+          <div key={team} className={`game-team team-${team}`}>
+            <h3 className="game-team-title">
+              {teamName(team)}
+              <span className="game-team-pips">
+                {state.teamPips?.[String(team)] ?? 0} pts
+              </span>
+            </h3>
+            <div className="game-team-members">
+              {state.players
+                .filter((player) => player.team === team)
+                .map((player) => (
+                  <Player
+                    key={player.id}
+                    player={player}
+                    isYou={player.id === youId}
+                    isCurrent={player.id === state.currentPlayer}
+                    tileCount={state.handCounts[player.id] ?? 0}
+                  />
+                ))}
+            </div>
+          </div>
         ))}
       </section>
 
@@ -99,9 +116,15 @@ export function Game({ state, result, error, onPlayTile, onLeave }: GameProps) {
           {finishedReason === "player-left" ? (
             <p>Un jugador abandonó la partida. Juego terminado.</p>
           ) : finishedReason === "blocked" ? (
-            <p>Partida bloqueada. Gana <strong>{winner?.name ?? "…"}</strong> por tener menos puntos.</p>
+            <p>
+              Partida bloqueada. Gana <strong>{winnerTeamLabel ?? "…"}</strong> por
+              tener menos puntos.
+            </p>
           ) : (
-            <p>¡<strong>{winner?.name ?? "…"}</strong> ganó la partida!</p>
+            <p>
+              ¡Ganó <strong>{winnerTeamLabel ?? "…"}</strong>!
+              {winner && <> ({winner.name} se quedó sin fichas)</>}
+            </p>
           )}
         </div>
       )}

@@ -16,10 +16,10 @@ function assert(condition: boolean, message: string): void {
 
 function makePlayers(): Player[] {
   return [
-    { id: "p0", name: "Ana", position: 0 },
-    { id: "p1", name: "Bruno", position: 1 },
-    { id: "p2", name: "Carla", position: 2 },
-    { id: "p3", name: "Diego", position: 3 },
+    { id: "p0", name: "Ana", position: 0, team: 0 },
+    { id: "p1", name: "Bruno", position: 1, team: 1 },
+    { id: "p2", name: "Carla", position: 2, team: 0 },
+    { id: "p3", name: "Diego", position: 3, team: 1 },
   ];
 }
 
@@ -143,6 +143,7 @@ assert(g6.hasWinner() === true, "hay ganador con la mano vacía");
 g6.finishWithWinner();
 assert(g6.state.status === "finished", "la partida termina");
 assert(g6.state.winnerId === "p0", "el ganador es p0");
+assert(g6.state.winnerTeam === 0, "gana el equipo de p0 (equipo 0)");
 assert(g6.state.winnerReason === "empty-hand", "el motivo es mano vacía");
 
 console.log("--- Finalización por bloqueo ---");
@@ -160,7 +161,8 @@ g7.state.hands = {
 g7.advanceTurn();
 assert(g7.state.status === "finished", "sin jugadas posibles la partida termina");
 assert(g7.state.winnerReason === "blocked", "el motivo es bloqueo");
-assert(g7.state.winnerId === "p1", "gana quien tiene menos puntos (p1 con [0|0])");
+assert(g7.state.winnerTeam === 0, "gana el equipo con menos puntos (equipo 0: 10 vs 12)");
+assert(g7.state.winnerId === "p0", "el mejor jugador del equipo ganador es p0 (3 puntos)");
 
 console.log("--- Estado público (privacidad de fichas) ---");
 

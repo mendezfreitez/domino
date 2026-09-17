@@ -39,7 +39,7 @@ export function Home({ initialName, onNameChange, onClearError, error }: HomePro
       <header className="home-header">
         <h1 className="home-title">Dominó Online</h1>
         <p className="home-subtitle">
-          Doble-Seis · 4 jugadores · 28 fichas
+          Doble-Seis · 2 vs 2 · 28 fichas
         </p>
       </header>
 

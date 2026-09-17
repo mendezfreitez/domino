@@ -64,26 +64,68 @@
   font-size: 0.95rem;
 }
 
-.lobby-players {
+.lobby-teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+}
+
+.lobby-team {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.9rem;
+}
+
+.lobby-team.team-0 {
+  border-top: 3px solid var(--accent);
+}
+
+.lobby-team.team-1 {
+  border-top: 3px solid var(--turn);
+}
+
+.lobby-team-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lobby-team-title {
+  font-weight: 700;
+}
+
+.lobby-team-count {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.lobby-team-players {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .lobby-player {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 0.8rem 1rem;
+  gap: 0.6rem;
+  background: var(--bg-panel-2);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  min-height: 3rem;
 }
 
 .lobby-player.occupied {
+  border-style: solid;
   border-color: var(--accent-soft);
 }
 
@@ -91,27 +133,48 @@
   outline: 1px solid var(--accent);
 }
 
-.lobby-player-pos {
-  color: var(--text-dim);
-  font-size: 0.85rem;
-  min-width: 5.5rem;
-}
-
 .lobby-player-name {
   flex: 1;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.lobby-player.occupied .lobby-player-name {
-  color: var(--text);
-}
-
-.lobby-player-you {
-  background: var(--accent-soft);
+.lobby-player-name em {
   color: var(--accent);
-  border-radius: 999px;
-  padding: 0.15rem 0.6rem;
-  font-size: 0.8rem;
+  font-style: normal;
+  font-size: 0.85rem;
+}
+
+.lobby-player-empty {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.lobby-player.draggable {
+  cursor: grab;
+}
+
+.lobby-player.draggable:active {
+  cursor: grabbing;
+}
+
+.lobby-player.dragging {
+  opacity: 0.45;
+}
+
+.lobby-player.drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+  background: var(--accent-soft);
+}
+
+.lobby-tip {
+  margin: 0;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.85rem;
 }
 
 .lobby-waiting {

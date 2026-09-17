@@ -12,10 +12,12 @@ export interface PublicGameState {
   currentPlayer: string | null;
   status: GameStatus;
   winnerId: string | null;
+  winnerTeam: number | null;
   winnerReason: WinnerReason | null;
   yourPlayerId: string;
   yourHand: DominoTile[];
   handCounts: Record<string, number>;
+  teamPips: Record<string, number>;
 }
 
 export interface RoomInfo {
@@ -28,5 +30,6 @@ export interface RoomInfo {
 export interface GameFinishedPayload {
   roomId: string;
   winnerId: string | null;
+  winnerTeam: number | null;
   winnerReason: WinnerReason | null;
 }
