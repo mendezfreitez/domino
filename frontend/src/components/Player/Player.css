@@ -12,6 +12,7 @@
 .player-card.current {
   border-color: var(--turn);
   box-shadow: 0 0 0 2px rgba(255, 209, 102, 0.3);
+  background-color: #ffd16620;
 }
 
 .player-card.you {

@@ -65,23 +65,12 @@ export function Board({ tiles }: BoardProps) {
     );
   }
 
-  const leftEnd = tiles[0].left;
-  const rightEnd = tiles[tiles.length - 1].right;
-
   return (
     <div
       ref={boardRef}
       className="board"
       style={{ "--board-tile-h": `${tileH}px` } as CSSProperties}
     >
-      <div className="board-ends">
-        <span>
-          Extremo izquierdo: <strong>{leftEnd}</strong>
-        </span>
-        <span>
-          Extremo derecho: <strong>{rightEnd}</strong>
-        </span>
-      </div>
       <div className="board-track">
         {tiles.map((tile) => {
           const isDouble = tile.left === tile.right;

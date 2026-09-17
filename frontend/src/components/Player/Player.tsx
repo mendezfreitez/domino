@@ -53,7 +53,6 @@ export function Player({ player, isYou, isCurrent, tileCount }: PlayerProps) {
   return (
     <div className={classes}>
       <div className="player-card-top">
-        <span className="player-pos">Jugador {player.position + 1}</span>
         {isCurrent && <span className="player-turn">Tu turno</span>}
       </div>
       <div className="player-name">
