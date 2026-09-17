@@ -133,14 +133,6 @@ export function Game({
         </main>
       </section>
 
-      <div className="game-teams">
-        {[0, 1].map((team) => (
-          <span key={team} className={`game-team-pill team-${team}`}>
-            {teamName(team)} · {state.teamPips?.[String(team)] ?? 0} pts
-          </span>
-        ))}
-      </div>
-
       {isFinished && (
         <div className="game-result">
           {finishedReason === "player-left" ? (

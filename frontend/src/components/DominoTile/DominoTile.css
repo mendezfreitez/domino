@@ -10,23 +10,23 @@
 }
 
 .domino-tile.size-hand.orientation-vertical {
-  width: 66px;
-  height: 132px;
+  width: 56px;
+  height: 112px;
 }
 
 .domino-tile.size-hand.orientation-horizontal {
-  width: 132px;
-  height: 66px;
+  width: 112px;
+  height: 56px;
 }
 
 .domino-tile.size-board.orientation-horizontal {
-  width: 128px;
-  height: 64px;
+  width: calc(var(--board-tile-h, 64px) * 2);
+  height: var(--board-tile-h, 64px);
 }
 
 .domino-tile.size-board.orientation-vertical {
-  width: 64px;
-  height: 128px;
+  width: var(--board-tile-h, 64px);
+  height: calc(var(--board-tile-h, 64px) * 2);
 }
 
 .domino-tile .tile-svg {
