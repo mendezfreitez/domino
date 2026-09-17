@@ -128,7 +128,9 @@ g5.state.hands = {
 };
 
 g5.advanceTurn();
-assert(g5.state.currentPlayer === "p2", "se salta al jugador sin fichas válidas (p1) y pasa al p2");
+assert(g5.state.currentPlayer === "p1", "el turno pasa simplemente al siguiente jugador (p1)");
+assert(g5.currentMustPass() === true, "p1 sin fichas jugables está en estado de pasar");
+assert(g5.canAnyonePlay() === true, "p2 sí puede jugar: aún no hay bloqueo");
 
 console.log("--- Ganador por mano vacía ---");
 
@@ -159,6 +161,9 @@ g7.state.hands = {
   p3: [tile("6-6")],
 };
 g7.advanceTurn();
+assert(g7.state.currentPlayer === "p1", "un jugador sin fichas no se salta: espera su PASO");
+assert(g7.canAnyonePlay() === false, "nadie puede jugar con el extremo [5]: hay bloqueo");
+g7.finishBlocked();
 assert(g7.state.status === "finished", "sin jugadas posibles la partida termina");
 assert(g7.state.winnerReason === "blocked", "el motivo es bloqueo");
 assert(g7.state.winnerTeam === 0, "gana el equipo con menos puntos (equipo 0: 10 vs 12)");
@@ -170,6 +175,7 @@ const g8 = new DominoGame("TEST8", makePlayers());
 g8.start();
 const pub = g8.getPublicState("p0");
 assert(pub.yourHand.length === 7, "el jugador recibe sus 7 fichas");
+assert(pub.mustPass === false, "con el tablero vacío el primer jugador no debe pasar");
 assert(pub.handCounts.p1 === 7, "el jugador ve la cantidad de fichas del rival");
 assert(pub.yourHand.every((t) => (g8.state.hands.p0 ?? []).some((x) => x.id === t.id)), "la mano propia coincide");
 assert("hands" in pub === false, "el estado público no expone la mano de los demás");

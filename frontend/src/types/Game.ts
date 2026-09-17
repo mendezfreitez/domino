@@ -18,6 +18,7 @@ export interface PublicGameState {
   yourHand: DominoTile[];
   handCounts: Record<string, number>;
   teamPips: Record<string, number>;
+  mustPass: boolean;
 }
 
 export interface RoomInfo {

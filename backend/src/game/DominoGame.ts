@@ -142,19 +142,38 @@ export class DominoGame {
 
   advanceTurn(): void {
     if (this.state.currentPlayer === null) return;
+    this.state.currentPlayer = this.nextPlayerId(this.state.currentPlayer);
+  }
 
-    let candidate = this.state.currentPlayer;
-    for (let i = 0; i < this.state.players.length; i++) {
-      candidate = this.nextPlayerId(candidate);
-      if (this.hasPlayableTile(candidate)) {
-        this.state.currentPlayer = candidate;
-        return;
-      }
-    }
+  hasPlayableTiles(playerId: string): boolean {
+    const hand = this.state.hands[playerId] ?? [];
+    if (this.state.board.length === 0) return hand.length > 0;
+    const left = this.boardLeft()!;
+    const right = this.boardRight()!;
+    return hand.some(
+      (t) =>
+        t.left === left ||
+        t.right === left ||
+        t.left === right ||
+        t.right === right
+    );
+  }
 
-    const team = this.blockingWinnerTeam();
-    this.state.winnerTeam = team;
-    this.state.winnerId = this.bestPlayerInTeam(team);
+  canAnyonePlay(): boolean {
+    return this.state.players.some((p) => this.hasPlayableTiles(p.id));
+  }
+
+  currentMustPass(): boolean {
+    return (
+      this.state.currentPlayer !== null &&
+      this.state.status === "playing" &&
+      !this.hasPlayableTiles(this.state.currentPlayer)
+    );
+  }
+
+  finishBlocked(): void {
+    this.state.winnerTeam = this.blockingWinnerTeam();
+    this.state.winnerId = this.bestPlayerInTeam(this.state.winnerTeam);
     this.state.winnerReason = "blocked";
     this.state.status = "finished";
   }
@@ -202,6 +221,7 @@ export class DominoGame {
       yourHand: this.state.hands[playerId] ?? [],
       handCounts,
       teamPips,
+      mustPass: this.currentMustPass(),
     };
   }
 
@@ -250,20 +270,6 @@ export class DominoGame {
       (player.position + 1) % this.state.players.length
     ];
     return next.id;
-  }
-
-  private hasPlayableTile(playerId: string): boolean {
-    const hand = this.state.hands[playerId] ?? [];
-    if (this.state.board.length === 0) return hand.length > 0;
-    const left = this.boardLeft()!;
-    const right = this.boardRight()!;
-    return hand.some(
-      (t) =>
-        t.left === left ||
-        t.right === left ||
-        t.left === right ||
-        t.right === right
-    );
   }
 
   private handPips(playerId: string): number {

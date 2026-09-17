@@ -215,6 +215,46 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager): vo
       broadcastGameState(io, room);
     });
 
+    socket.on("pass_turn", () => {
+      const roomId = session.roomId;
+      const playerId = session.playerId;
+      if (!roomId || !playerId) return;
+
+      const room = roomManager.getRoom(roomId);
+      if (!room || !room.game) return;
+      const game = room.game;
+
+      if (game.state.status !== "playing") {
+        socket.emit("invalid_move", { message: "La partida no está en curso." });
+        return;
+      }
+      if (game.state.currentPlayer !== playerId) {
+        socket.emit("invalid_move", { message: "No es tu turno." });
+        return;
+      }
+      if (game.hasPlayableTiles(playerId)) {
+        socket.emit("invalid_move", {
+          message: "Tienes fichas jugables, no puedes pasar.",
+        });
+        return;
+      }
+
+      const passer = room.players.find((p) => p.id === playerId);
+      io.to(roomId).emit("player_passed", {
+        playerId,
+        name: passer?.name ?? "Jugador",
+      });
+
+      if (!game.canAnyonePlay()) {
+        game.finishBlocked();
+        emitGameFinished(io, room);
+        return;
+      }
+
+      game.advanceTurn();
+      broadcastGameState(io, room);
+    });
+
     socket.on("disconnect", () => {
       const { roomId, playerId } = session;
       if (!roomId || !playerId) return;

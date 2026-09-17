@@ -29,6 +29,10 @@ export function emitSwapPlayers(playerIdA: string, playerIdB: string): void {
   socket.emit("swap_players", { playerIdA, playerIdB });
 }
 
+export function emitPassTurn(): void {
+  socket.emit("pass_turn");
+}
+
 export function emitPlayTile(payload: PlayTilePayload): void {
   socket.emit("play_tile", payload);
 }

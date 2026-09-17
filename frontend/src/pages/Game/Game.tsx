@@ -10,16 +10,27 @@ interface GameProps {
   state: PublicGameState;
   result: GameFinishedPayload | null;
   error: string | null;
+  lastPass: { playerId: string; name: string } | null;
   onPlayTile: (tileId: string, side: "left" | "right") => void;
+  onPass: () => void;
   onLeave: () => void;
 }
 
-export function Game({ state, result, error, onPlayTile, onLeave }: GameProps) {
+export function Game({
+  state,
+  result,
+  error,
+  lastPass,
+  onPlayTile,
+  onPass,
+  onLeave,
+}: GameProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const youId = state.yourPlayerId;
   const isYourTurn =
     state.status === "playing" && state.currentPlayer === youId;
+  const mustPass = isYourTurn && state.mustPass;
 
   const boardLeft = state.board.length ? state.board[0].left : null;
   const boardRight = state.board.length
@@ -139,6 +150,14 @@ export function Game({ state, result, error, onPlayTile, onLeave }: GameProps) {
           selectedId={selectedId}
           onSelectTile={handleSelect}
         />
+        {mustPass && (
+          <div className="game-pass-area">
+            <p>No tienes fichas que puedas colocar en el tablero.</p>
+            <button className="primary" onClick={onPass}>
+              PASO
+            </button>
+          </div>
+        )}
         {selectedId && isYourTurn && (
           <div className="game-side-picker">
             <span>¿Por dónde jugar [<strong>{selectedId.replace("-", "|")}</strong>]?</span>
@@ -147,6 +166,16 @@ export function Game({ state, result, error, onPlayTile, onLeave }: GameProps) {
           </div>
         )}
       </section>
+
+      {lastPass && (
+        <div className="pass-modal-overlay">
+          <div className="pass-modal">
+            <p>
+              Jugador <strong>{lastPass.name}</strong> ha pasado
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

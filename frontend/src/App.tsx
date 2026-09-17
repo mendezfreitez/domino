@@ -3,6 +3,7 @@ import { Home } from "./pages/Home/Home";
 import { Lobby } from "./pages/Lobby/Lobby";
 import { Game } from "./pages/Game/Game";
 import {
+  emitPassTurn,
   emitPlayTile,
   socket,
 } from "./services/socket";
@@ -24,6 +25,10 @@ export default function App() {
   const [gameState, setGameState] = useState<PublicGameState | null>(null);
   const [gameResult, setGameResult] = useState<GameFinishedPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastPass, setLastPass] = useState<{
+    playerId: string;
+    name: string;
+  } | null>(null);
 
   useEffect(() => {
     const onRoomCreated = (data: {
@@ -57,7 +62,13 @@ export default function App() {
     const onGameStarted = () => {
       setError(null);
       setGameResult(null);
+      setLastPass(null);
       setView("game");
+    };
+
+    const onPlayerPassed = (data: { playerId: string; name: string }) => {
+      setLastPass(data);
+      window.setTimeout(() => setLastPass(null), 3000);
     };
 
     const onGameUpdated = (state: PublicGameState) => {
@@ -83,6 +94,7 @@ export default function App() {
     socket.on("game_started", onGameStarted);
     socket.on("game_updated", onGameUpdated);
     socket.on("game_finished", onGameFinished);
+    socket.on("player_passed", onPlayerPassed);
     socket.on("invalid_move", onInvalidMove);
     socket.on("room_error", onRoomError);
 
@@ -94,6 +106,7 @@ export default function App() {
       socket.off("game_started", onGameStarted);
       socket.off("game_updated", onGameUpdated);
       socket.off("game_finished", onGameFinished);
+      socket.off("player_passed", onPlayerPassed);
       socket.off("invalid_move", onInvalidMove);
       socket.off("room_error", onRoomError);
     };
@@ -114,11 +127,17 @@ export default function App() {
     setGameState(null);
     setGameResult(null);
     setError(null);
+    setLastPass(null);
   };
 
   const handlePlayTile = (tileId: string, side: "left" | "right") => {
     setError(null);
     emitPlayTile({ tileId, side });
+  };
+
+  const handlePass = () => {
+    setError(null);
+    emitPassTurn();
   };
 
   if (view === "lobby") {
@@ -142,7 +161,9 @@ export default function App() {
         state={gameState}
         result={gameResult}
         error={error}
+        lastPass={lastPass}
         onPlayTile={handlePlayTile}
+        onPass={handlePass}
         onLeave={handleLeave}
       />
     );

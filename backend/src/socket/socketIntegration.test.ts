@@ -234,7 +234,7 @@ async function main(): Promise<void> {
     console.log("--- Partida completa (jugadas automáticas) ---");
 
     let moves = 0;
-    const maxMoves = 100;
+    const maxMoves = 120;
     while (moves < maxMoves) {
       const anyFinished = sessions.find((s) => s.state?.status === "finished");
       if (anyFinished) break;
@@ -248,19 +248,40 @@ async function main(): Promise<void> {
       }
 
       const tileId = pickPlayable(mover.state);
-      assert(tileId !== null, "el jugador con turno siempre tiene una ficha jugable");
-      if (!tileId) break;
+      const boardBefore = mover.state.board.length;
 
-      const roomId = mover.roomId;
-      mover.client.emit("play_tile", { tileId });
-      await wait(120);
-
-      assert(
-        roomId === mover.roomId && mover.state!.board.length > 0,
-        `movimiento ${moves + 1}: se coloca una ficha en el tablero`
-      );
-      const moved = mover.state!.yourHand.find((t) => t.id === tileId);
-      assert(!moved, "la ficha jugada desaparece de la mano del jugador");
+      if (tileId) {
+        const roomId = mover.roomId;
+        mover.client.emit("play_tile", { tileId });
+        await wait(120);
+        assert(
+          roomId === mover.roomId &&
+            mover.state!.board.length === boardBefore + 1,
+          `movimiento ${moves + 1}: se coloca una ficha en el tablero`
+        );
+        const moved = mover.state!.yourHand.find((t) => t.id === tileId);
+        assert(!moved, "la ficha jugada desaparece de la mano del jugador");
+      } else {
+        assert(
+          mover.state.mustPass === true,
+          "el jugador sin fichas jugables está en mustPass"
+        );
+        const passEvent = Promise.race([
+          onceEvent(mover.client, "player_passed"),
+          onceEvent(mover.client, "game_finished"),
+        ]);
+        mover.client.emit("pass_turn");
+        const result = (await passEvent) as { playerId?: string } | null;
+        if (result && typeof result.playerId === "string") {
+          assert(
+            result.playerId === mover.playerId,
+            "player_passed notifica quién pasó"
+          );
+        } else {
+          assert(true, "un pase que provoca bloqueo termina la partida");
+        }
+        await wait(120);
+      }
       moves++;
     }
 

@@ -141,6 +141,67 @@
   background: var(--accent);
 }
 
+.game-pass-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.game-pass-area p {
+  margin: 0;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.pass-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 40;
+}
+
+.pass-modal {
+  background: var(--bg-panel);
+  border: 1px solid var(--accent-soft);
+  border-radius: 14px;
+  padding: 1.25rem 1.75rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  animation: pass-pop 0.25s ease;
+}
+
+.pass-modal p {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.pass-modal p strong {
+  color: var(--accent);
+  font-size: 1.3em;
+  font-weight: 700;
+}
+
+@keyframes pass-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pass-modal {
+    animation: none;
+  }
+}
+
 @media (max-width: 640px) {
   .game-players {
     grid-template-columns: 1fr;
