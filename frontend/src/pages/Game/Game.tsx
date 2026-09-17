@@ -118,7 +118,6 @@ export function Game({
     { className: "game-seat-top", player: seatAt(2) },
     { className: "game-seat-left", player: seatAt(1) },
     { className: "game-seat-right", player: seatAt(3) },
-    { className: "game-seat-bottom", player: seatAt(0) },
   ].filter(
     (seat): seat is { className: string; player: PlayerType } =>
       seat.player !== undefined
