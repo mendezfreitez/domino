@@ -25,8 +25,9 @@ export function Board({ tiles }: BoardProps) {
     if (!el) return;
 
     const measure = () => {
-      const rect = el.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) return;
+      const width = el.clientWidth;
+      const height = el.clientHeight;
+      if (width <= 0 || height <= 0) return;
 
       const count = tiles.length;
       if (count === 0) {
@@ -34,9 +35,9 @@ export function Board({ tiles }: BoardProps) {
         return;
       }
 
-      const availW = rect.width - BOARD_PAD_X * 2;
+      const availW = width - BOARD_PAD_X * 2;
       const availH = Math.max(
-        rect.height - BOARD_PAD_Y * 2 - ENDS_EXTRA,
+        height - BOARD_PAD_Y * 2 - ENDS_EXTRA,
         1
       );
 
