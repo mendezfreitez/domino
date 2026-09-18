@@ -127,6 +127,12 @@ export class DominoGame {
     const hand = this.state.hands[playerId]!;
     const tile = hand.find((t) => t.id === tileId)!;
     const chosenSide = this.resolveSide(tile, side);
+    if (chosenSide === null) {
+      return {
+        valid: false,
+        reason: "Esa ficha no va en ese lado del tablero.",
+      };
+    }
     const oriented = this.orientedTile(tile, chosenSide);
 
     if (chosenSide === "left") {
@@ -244,12 +250,13 @@ export class DominoGame {
     return right !== null && (tile.left === right || tile.right === right);
   }
 
-  private resolveSide(tile: DominoTile, side?: BoardSide): BoardSide {
+  private resolveSide(tile: DominoTile, side?: BoardSide): BoardSide | null {
     if (this.state.board.length === 0) return "right";
     const leftOk = this.canPlaceOnLeft(tile);
     const rightOk = this.canPlaceOnRight(tile);
     if (side === "left" && leftOk) return "left";
     if (side === "right" && rightOk) return "right";
+    if (side) return null;
     if (rightOk) return "right";
     return "left";
   }

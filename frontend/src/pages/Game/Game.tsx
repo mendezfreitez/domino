@@ -33,6 +33,7 @@ export function Game({
   onLeave,
 }: GameProps) {
   const [dragTileId, setDragTileId] = useState<string | null>(null);
+  const [showInvalidDrop, setShowInvalidDrop] = useState<boolean>(false);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState<number>(1);
 
@@ -81,11 +82,33 @@ export function Game({
   }, [state.yourHand, state.status, boardLeft, boardRight]);
 
   const handleDrop = (tileId: string, side: "left" | "right") => {
-    onPlayTile(tileId, side);
+    const tile = state.yourHand.find((t) => t.id === tileId);
     setDragTileId(null);
+    if (!tile) {
+      setShowInvalidDrop(true);
+      return;
+    }
+    const valid =
+      side === "left"
+        ? boardLeft === null ||
+          tile.left === boardLeft ||
+          tile.right === boardLeft
+        : boardRight === null ||
+          tile.left === boardRight ||
+          tile.right === boardRight;
+    if (!valid) {
+      setShowInvalidDrop(true);
+      return;
+    }
+    setShowInvalidDrop(false);
+    onPlayTile(tileId, side);
   };
 
-  const handleTileDragStart = (tileId: string, event: DragEvent<HTMLElement>) => {
+  const handleTileDragStart = (
+    tileId: string,
+    event: DragEvent<HTMLElement>
+  ) => {
+    setShowInvalidDrop(false);
     setDragTileId(tileId);
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", tileId);
@@ -98,10 +121,14 @@ export function Game({
   const dragTile = state.yourHand.find((t) => t.id === dragTileId) ?? null;
   const dropLeftValid =
     dragTile !== null &&
-    (boardLeft === null || dragTile.right === boardLeft);
+    (boardLeft === null ||
+      dragTile.left === boardLeft ||
+      dragTile.right === boardLeft);
   const dropRightValid =
     dragTile !== null &&
-    (boardRight === null || dragTile.left === boardRight);
+    (boardRight === null ||
+      dragTile.left === boardRight ||
+      dragTile.right === boardRight);
 
   const currentPlayer = state.players.find((p) => p.id === state.currentPlayer);
   const winner = state.players.find((p) => p.id === (result?.winnerId ?? state.winnerId));
@@ -229,6 +256,21 @@ export function Game({
             <p>
               Jugador <strong>{lastPass.name}</strong> ha pasado
             </p>
+          </div>
+        </div>
+      )}
+
+      {showInvalidDrop && (
+        <div className="pass-modal-overlay">
+          <div className="pass-modal">
+            <p>Esa ficha no va en ese lado del tablero.</p>
+            <button
+              className="primary"
+              style={{padding: '6px 18px'}}
+              onClick={() => setShowInvalidDrop(false)}
+            >
+              Entendido
+            </button>
           </div>
         </div>
       )}

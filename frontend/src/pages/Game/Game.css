@@ -199,11 +199,16 @@
 
 .pass-modal {
   background: var(--bg-panel);
+  opacity: 0.9;
   border: 1px solid var(--accent-soft);
   border-radius: 14px;
-  padding: 1.25rem 1.75rem;
+  padding: 1rem 1.2rem;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   animation: pass-pop 0.25s ease;
+  display: flex;
+  row-gap: 20px;
+  flex-direction: column;
+  align-items: center;
 }
 
 .pass-modal p {

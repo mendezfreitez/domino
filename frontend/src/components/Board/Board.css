@@ -27,8 +27,8 @@
   max-width: 100%;
   overflow-x: auto;
   padding: 12px 16px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
+  background: transparent;
+  border-width: 0;
   border-radius: 14px;
   min-height: calc(var(--board-tile-h, 64px) * 2);
   scrollbar-width: thin;
