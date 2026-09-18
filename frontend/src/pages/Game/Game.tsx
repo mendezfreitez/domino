@@ -1,10 +1,16 @@
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { Board } from "../../components/Board/Board";
 import { Player } from "../../components/Player/Player";
 import { PlayerHand } from "../../components/PlayerHand/PlayerHand";
 import { teamName, type Player as PlayerType } from "../../types/Player";
 import type { GameFinishedPayload, PublicGameState } from "../../types/Game";
 import "./Game.css";
+
+const DESIGN_WIDTH = 1920;
+const DESIGN_HEIGHT = 1080;
+const ZOOM = 1.03;
+const MIN_SCALE = 0.25;
 
 interface GameProps {
   state: PublicGameState;
@@ -26,6 +32,24 @@ export function Game({
   onLeave,
 }: GameProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const [scale, setScale] = useState<number>(1);
+
+  useLayoutEffect(() => {
+    const recompute = () => {
+      const next = Math.max(
+        Math.min(
+          window.innerWidth / DESIGN_WIDTH,
+          window.innerHeight / DESIGN_HEIGHT
+        ) * ZOOM,
+        MIN_SCALE
+      );
+      setScale(next);
+    };
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, []);
 
   const youId = state.yourPlayerId;
   const isYourTurn =
@@ -92,8 +116,14 @@ export function Game({
   const isFinished = state.status === "finished";
 
   return (
-    <div className="game">
-      <header className="game-header">
+    <div className="game-viewport">
+      <div
+        className="game-stage"
+        ref={stageRef}
+        style={{ "--game-scale": scale } as CSSProperties}
+      >
+        <div className="game">
+          <header className="game-header">
         <div className="game-room">
           <span className="game-room-label">Sala</span>
           <span className="game-room-code">{state.roomId}</span>
@@ -176,6 +206,8 @@ export function Game({
           </div>
         )}
       </section>
+        </div>
+      </div>
 
       {lastPass && (
         <div className="pass-modal-overlay">
