@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import type { DragEvent } from "react";
 import type { DominoTile as Tile } from "../../types/Domino";
 import { DominoTile } from "../DominoTile/DominoTile";
 import "./Board.css";
@@ -14,9 +15,36 @@ const ENDS_EXTRA = 52;
 
 interface BoardProps {
   tiles: Tile[];
+  dragTileId: string | null;
+  dropLeftValid: boolean;
+  dropRightValid: boolean;
+  onDropTile: (tileId: string, side: "left" | "right") => void;
 }
 
-export function Board({ tiles }: BoardProps) {
+function dropHandlers(
+  side: "left" | "right",
+  onDropTile: BoardProps["onDropTile"]
+) {
+  return {
+    onDragOver: (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+    },
+    onDrop: (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const tileId = event.dataTransfer.getData("text/plain");
+      if (tileId) onDropTile(tileId, side);
+    },
+  };
+}
+
+export function Board({
+  tiles,
+  dragTileId,
+  dropLeftValid,
+  dropRightValid,
+  onDropTile,
+}: BoardProps) {
   const boardRef = useRef<HTMLDivElement | null>(null);
   const [tileH, setTileH] = useState<number>(DEFAULT_TILE_H);
 
@@ -45,7 +73,6 @@ export function Board({ tiles }: BoardProps) {
       const widthUnits = (count - doubles) * 2 + doubles;
       const gaps = (count - 1) * BOARD_GAP;
 
-      // En fichas horizontales cada unidad mide 2h; las dobles verticales miden h.
       const fit = Math.min((availW - gaps) / widthUnits, availH / 2);
       const next = Math.min(Math.max(fit, MIN_TILE_H), MAX_TILE_H);
       setTileH(next);
@@ -57,10 +84,21 @@ export function Board({ tiles }: BoardProps) {
     return () => observer.disconnect();
   }, [tiles.length]);
 
+  const dragging = dragTileId !== null;
+  const zoneClass = (side: "left" | "right", valid: boolean) =>
+    `board-drop board-drop-${side}${
+      dragging ? ` visible ${valid ? "active" : "blocked"}` : ""
+    }`;
+
   if (tiles.length === 0) {
     return (
-      <div className="board board-empty">
-        <p>El tablero está vacío. Coloca la primera ficha.</p>
+      <div
+        ref={boardRef}
+        className={`board board-empty${dragTileId ? " drop-active" : ""}`}
+        style={{ "--board-tile-h": `${tileH}px` } as CSSProperties}
+        {...dropHandlers("left", onDropTile)}
+      >
+        <p>El tablero está vacío. Arrastra una ficha aquí.</p>
       </div>
     );
   }
@@ -72,6 +110,11 @@ export function Board({ tiles }: BoardProps) {
       style={{ "--board-tile-h": `${tileH}px` } as CSSProperties}
     >
       <div className="board-track">
+        <div
+          className={zoneClass("left", dropLeftValid)}
+          aria-label="Colocar ficha a la izquierda"
+          {...dropHandlers("left", onDropTile)}
+        />
         {tiles.map((tile) => {
           const isDouble = tile.left === tile.right;
           return (
@@ -83,6 +126,11 @@ export function Board({ tiles }: BoardProps) {
             />
           );
         })}
+        <div
+          className={zoneClass("right", dropRightValid)}
+          aria-label="Colocar ficha a la derecha"
+          {...dropHandlers("right", onDropTile)}
+        />
       </div>
     </div>
   );

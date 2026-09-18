@@ -71,13 +71,16 @@
   stroke: var(--accent);
 }
 
-.domino-tile.selected {
-  transform: translateY(-8px);
-  box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.35), 0 3px 8px rgba(0, 0, 0, 0.35);
+.domino-tile.drag-source {
+  cursor: grab;
 }
 
-.domino-tile.selected .tile-face {
-  stroke: var(--turn);
+.domino-tile.drag-source:active {
+  cursor: grabbing;
+}
+
+.domino-tile.dimmed {
+  opacity: 0.4;
 }
 
 .domino-tile.disabled {

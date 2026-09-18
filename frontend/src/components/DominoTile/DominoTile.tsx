@@ -1,3 +1,4 @@
+import type { DragEvent } from "react";
 import type { DominoTile as Tile } from "../../types/Domino";
 import "./DominoTile.css";
 
@@ -83,29 +84,36 @@ interface DominoTileProps {
   tile: Tile;
   size?: "hand" | "board";
   orientation?: Orientation;
-  selected?: boolean;
   playable?: boolean;
   disabled?: boolean;
+  draggable?: boolean;
+  dimmed?: boolean;
   onClick?: () => void;
+  onDragStart?: (event: DragEvent<HTMLElement>) => void;
+  onDragEnd?: () => void;
 }
 
 export function DominoTile({
   tile,
   size = "hand",
   orientation = "vertical",
-  selected = false,
   playable = false,
   disabled = false,
+  draggable = false,
+  dimmed = false,
   onClick,
+  onDragStart,
+  onDragEnd,
 }: DominoTileProps) {
   const classes = [
     "domino-tile",
     `size-${size}`,
     `orientation-${orientation}`,
-    selected ? "selected" : "",
     playable ? "playable" : "",
     disabled ? "disabled" : "",
     onClick ? "clickable" : "",
+    draggable ? "drag-source" : "",
+    dimmed ? "dimmed" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -114,6 +122,21 @@ export function DominoTile({
   const face = (
     <TileSvg left={tile.left} right={tile.right} orientation={orientation} />
   );
+
+  if (draggable) {
+    return (
+      <div
+        className={classes}
+        draggable
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        role="img"
+        aria-label={label}
+      >
+        {face}
+      </div>
+    );
+  }
 
   if (onClick) {
     return (

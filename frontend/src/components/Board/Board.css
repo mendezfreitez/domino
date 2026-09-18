@@ -54,3 +54,34 @@
   border: 1px dashed var(--border);
   border-radius: 14px;
 }
+
+.board-drop {
+  flex: none;
+  align-self: center;
+  width: 0;
+  height: calc(var(--board-tile-h, 64px));
+  border: 2px dashed transparent;
+  border-radius: 10px;
+  transition: width 0.15s ease, border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.board-drop.visible {
+  width: calc(var(--board-tile-h, 64px) * 2);
+}
+
+.board-drop.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.board-drop.blocked {
+  border-color: color-mix(in srgb, var(--text-dim) 35%, transparent);
+}
+
+.board-empty.drop-active {
+  outline: 2px dashed var(--accent);
+  outline-offset: 4px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}

@@ -1,3 +1,4 @@
+import type { DragEvent } from "react";
 import type { DominoTile as Tile } from "../../types/Domino";
 import { DominoTile } from "../DominoTile/DominoTile";
 import "./PlayerHand.css";
@@ -6,16 +7,18 @@ interface PlayerHandProps {
   tiles: Tile[];
   isYourTurn: boolean;
   playableIds: Set<string>;
-  selectedId: string | null;
-  onSelectTile: (tileId: string) => void;
+  dragTileId: string | null;
+  onTileDragStart: (tileId: string, event: DragEvent<HTMLElement>) => void;
+  onTileDragEnd: () => void;
 }
 
 export function PlayerHand({
   tiles,
   isYourTurn,
   playableIds,
-  selectedId,
-  onSelectTile,
+  dragTileId,
+  onTileDragStart,
+  onTileDragEnd,
 }: PlayerHandProps) {
   return (
     <div className="player-hand">
@@ -27,10 +30,12 @@ export function PlayerHand({
             tile={tile}
             size="hand"
             orientation="vertical"
-            selected={selectedId === tile.id}
             playable={playable}
             disabled={!playable && isYourTurn}
-            onClick={playable ? () => onSelectTile(tile.id) : undefined}
+            draggable={playable}
+            dimmed={dragTileId === tile.id}
+            onDragStart={(event) => onTileDragStart(tile.id, event)}
+            onDragEnd={onTileDragEnd}
           />
         );
       })}

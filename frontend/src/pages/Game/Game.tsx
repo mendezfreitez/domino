@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import type { DragEvent } from "react";
 import { Board } from "../../components/Board/Board";
 import { Player } from "../../components/Player/Player";
 import { PlayerHand } from "../../components/PlayerHand/PlayerHand";
@@ -31,7 +32,7 @@ export function Game({
   onPass,
   onLeave,
 }: GameProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [dragTileId, setDragTileId] = useState<string | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState<number>(1);
 
@@ -79,15 +80,28 @@ export function Game({
     return ids;
   }, [state.yourHand, state.status, boardLeft, boardRight]);
 
-  const handleSelect = (tileId: string) => {
-    setSelectedId((current) => (current === tileId ? null : tileId));
+  const handleDrop = (tileId: string, side: "left" | "right") => {
+    onPlayTile(tileId, side);
+    setDragTileId(null);
   };
 
-  const handlePlay = (side: "left" | "right") => {
-    if (!selectedId) return;
-    onPlayTile(selectedId, side);
-    setSelectedId(null);
+  const handleTileDragStart = (tileId: string, event: DragEvent<HTMLElement>) => {
+    setDragTileId(tileId);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", tileId);
   };
+
+  const handleTileDragEnd = () => {
+    setDragTileId(null);
+  };
+
+  const dragTile = state.yourHand.find((t) => t.id === dragTileId) ?? null;
+  const dropLeftValid =
+    dragTile !== null &&
+    (boardLeft === null || dragTile.right === boardLeft);
+  const dropRightValid =
+    dragTile !== null &&
+    (boardRight === null || dragTile.left === boardRight);
 
   const currentPlayer = state.players.find((p) => p.id === state.currentPlayer);
   const winner = state.players.find((p) => p.id === (result?.winnerId ?? state.winnerId));
@@ -158,7 +172,13 @@ export function Game({
           </div>
         ))}
         <main className="game-board-center">
-          <Board tiles={state.board} />
+          <Board
+            tiles={state.board}
+            dragTileId={dragTileId}
+            dropLeftValid={dropLeftValid}
+            dropRightValid={dropRightValid}
+            onDropTile={handleDrop}
+          />
         </main>
       </section>
 
@@ -187,8 +207,9 @@ export function Game({
           tiles={state.yourHand}
           isYourTurn={isYourTurn}
           playableIds={playableIds}
-          selectedId={selectedId}
-          onSelectTile={handleSelect}
+          dragTileId={dragTileId}
+          onTileDragStart={handleTileDragStart}
+          onTileDragEnd={handleTileDragEnd}
         />
         {mustPass && (
           <div className="game-pass-area">
@@ -196,13 +217,6 @@ export function Game({
             <button className="primary" onClick={onPass}>
               PASO
             </button>
-          </div>
-        )}
-        {selectedId && isYourTurn && (
-          <div className="game-side-picker">
-            <span>¿Por dónde jugar [<strong>{selectedId.replace("-", "|")}</strong>]?</span>
-            <button onClick={() => handlePlay("left")}>Izquierda ◀</button>
-            <button onClick={() => handlePlay("right")}>Derecha ▶</button>
           </div>
         )}
       </section>
