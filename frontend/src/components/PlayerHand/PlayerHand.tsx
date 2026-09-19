@@ -21,7 +21,7 @@ export function PlayerHand({
   onTileDragEnd,
 }: PlayerHandProps) {
   return (
-    <div className="player-hand">
+    <div className={`player-hand ${isYourTurn ? "tuTurno" : ""}`}>
       {tiles.map((tile) => {
         // const playable = isYourTurn && playableIds.has(tile.id);
         const playable = isYourTurn;

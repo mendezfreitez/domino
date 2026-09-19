@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { DragEvent } from "react";
+import { Check, Copy } from "lucide-react";
 import {
   emitMovePlayer,
   emitStartGame,
@@ -23,6 +24,24 @@ const PLAYERS_PER_TEAM = 2;
 export function Lobby({ roomId, players, playerId, error, onLeave }: LobbyProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const copyRoomCode = async () => {
+    try {
+      await navigator.clipboard.writeText(roomId);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = roomId;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+  };
 
   const membersOf = (team: number): (Player | null)[] => {
     const members = players.filter((p) => p.team === team);
@@ -102,7 +121,18 @@ export function Lobby({ roomId, players, playerId, error, onLeave }: LobbyProps)
 
       <section className="lobby-code-card">
         <span className="lobby-code-label">Código de sala</span>
-        <span className="lobby-code">{roomId}</span>
+        <div className="lobby-code-row">
+          <span className="lobby-code">{roomId}</span>
+          <button
+            type="button"
+            className="lobby-copy"
+            onClick={copyRoomCode}
+            aria-label="Copiar código"
+            title={copied ? "Código copiado" : "Copiar código"}
+          >
+            {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+          </button>
+        </div>
         <span className="lobby-count">
           {players.length} / {PLAYERS_PER_TEAM * TEAMS.length} jugadores
         </span>

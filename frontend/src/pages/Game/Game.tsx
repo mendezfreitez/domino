@@ -217,7 +217,7 @@ export function Game({
           ) : (
             <p>
               ¡Ganó <strong>{winnerTeamLabel ?? "…"}</strong>!
-              {winner && <> ({winner.name} se quedó sin fichas)</>}
+              {winner && <> (<strong>{winner.name}</strong> se quedó sin fichas)</>}
             </p>
           )}
         </div>
