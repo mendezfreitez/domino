@@ -44,18 +44,15 @@
 .board-drop {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 0;
-  height: calc(var(--board-tile-h, 64px));
   border: 2px dashed transparent;
   border-radius: 10px;
-  transition: width 0.15s ease, border-color 0.15s ease,
-    background-color 0.15s ease, opacity 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease,
+    opacity 0.15s ease;
   opacity: 0;
   pointer-events: none;
 }
 
 .board-drop.visible {
-  width: calc(var(--board-tile-h, 64px) * 2);
   opacity: 1;
   pointer-events: auto;
 }
