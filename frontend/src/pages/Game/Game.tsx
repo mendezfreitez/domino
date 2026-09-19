@@ -187,9 +187,9 @@ export function Game({
             key={player.id}
             className={`game-seat ${className} team-${player.team}`}
           >
-            <span className={`game-team-badge team-${player.team}`}>
+            {/* <span className={`game-team-badge team-${player.team}`}>
               {teamName(player.team)}
-            </span>
+            </span> */}
             <Player
               player={player}
               isYou={player.id === youId}

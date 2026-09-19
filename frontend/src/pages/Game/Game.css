@@ -67,7 +67,7 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(120px, 220px) minmax(0, 1fr) minmax(120px, 220px);
+  grid-template-columns: minmax(120px, 80px) minmax(0, 1fr) minmax(120px, 80px);
   grid-template-rows: auto minmax(0, 1fr) auto;
   align-items: center;
 }
