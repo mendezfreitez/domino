@@ -5,9 +5,6 @@
   flex-wrap: wrap;
   max-width: 100%;
   padding: 7px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 14px;
   min-height: 130px;
   align-content: flex-start;
   width: 30%;

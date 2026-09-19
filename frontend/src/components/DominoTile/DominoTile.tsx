@@ -110,9 +110,11 @@ export function DominoTile({
     `size-${size}`,
     `orientation-${orientation}`,
     playable ? "playable" : "",
-    disabled ? "disabled" : "",
+    // disabled ? "disabled" : "",
+    disabled ? "" : "",
     onClick ? "clickable" : "",
-    draggable ? "drag-source" : "",
+    // draggable ? "drag-source" : "",
+    draggable ? "" : "",
     dimmed ? "dimmed" : "",
   ]
     .filter(Boolean)

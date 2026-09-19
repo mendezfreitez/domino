@@ -15,7 +15,7 @@ interface PlayerHandProps {
 export function PlayerHand({
   tiles,
   isYourTurn,
-  playableIds,
+  // playableIds,
   dragTileId,
   onTileDragStart,
   onTileDragEnd,
@@ -23,7 +23,8 @@ export function PlayerHand({
   return (
     <div className="player-hand">
       {tiles.map((tile) => {
-        const playable = isYourTurn && playableIds.has(tile.id);
+        // const playable = isYourTurn && playableIds.has(tile.id);
+        const playable = isYourTurn;
         return (
           <DominoTile
             key={tile.id}
