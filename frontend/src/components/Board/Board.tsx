@@ -9,7 +9,7 @@ const MAX_TILE_H = 108;
 const DEFAULT_TILE_H = 64;
 const BOARD_PAD_X = 16;
 const BOARD_PAD_Y = 12;
-const ROW_LEN = 16;
+const ROW_LEN = 8;
 
 type Orientation = "horizontal" | "vertical";
 
@@ -77,9 +77,9 @@ function computeLayout(tiles: Tile[], stackSign: 1 | -1): Layout {
     }
 
     if (isFold) {
-      // El cruce (ficha 16 y cada 17 fichas después) gira 90° conectando
-      // la fila actual con la siguiente. Cada fila es completa (16 fichas),
-      // así los cruces alternan entre el extremo derecho y el izquierdo.
+      // El cruce (cada fin de fila de ROW_LEN fichas) gira 90° conectando
+      // la fila actual con la siguiente. Las filas alternan el extremo en que
+      // cruzan: primero la derecha, luego la izquierda, y así sucesivamente.
       const endX = rowEndX!;
       const fx = dir === 1 ? endX + 0.5 : endX - 0.5;
       const fy = stackSign === 1 ? rowY + 0.5 : rowY - 0.5;
