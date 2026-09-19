@@ -53,8 +53,8 @@ export interface ChainBuilder {
 }
 
 export const DEFAULT_CONFIG: BoardConfig = {
-  mainLineLength: 15,
-  tileGap: 0.15,
+  mainLineLength: 17,
+  tileGap: 0.02,
   rightTurnDirection: "UP",
   leftTurnDirection: "DOWN",
 };
