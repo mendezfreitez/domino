@@ -10,7 +10,6 @@ const DEFAULT_TILE_H = 64;
 const BOARD_PAD_X = 16;
 const BOARD_PAD_Y = 12;
 const ROW_LEN = 16;
-const SHORT_ROW_LEN = 3;
 
 type Orientation = "horizontal" | "vertical";
 
@@ -44,13 +43,18 @@ function computeLayout(tiles: Tile[], stackSign: 1 | -1): Layout {
   let pendingFirstCenter: number | null = null;
   let rowEndX: number | null = null;
   let nextFold = ROW_LEN;
+  // Orientación alternada de los cruces: si el cruce derecho va hacia abajo,
+  // el izquierdo va hacia arriba, y viceversa (se alterna en cada doblez).
+  let foldRotation: 0 | 180 = 0;
 
   for (let i = 0; i < tiles.length; i++) {
     const tile = tiles[i];
     let isFold = false;
     if (i > 0 && i === nextFold) {
-      if (tile.left === tile.right) {
-        // El cruce nunca ocurre en una ficha doble: se traslada a la siguiente.
+      // Nunca se cruza sobre una ficha doble ni inmediatamente después de
+      // una: se traslada el cruce a la siguiente ficha.
+      const prevTile = tiles[i - 1];
+      if (tile.left === tile.right || prevTile.left === prevTile.right) {
         nextFold = i + 1;
       } else {
         isFold = true;
@@ -73,12 +77,13 @@ function computeLayout(tiles: Tile[], stackSign: 1 | -1): Layout {
     }
 
     if (isFold) {
-      // La ficha 19 (y cada 19 fichas) gira 90° conectando la fila actual
-      // con la siguiente.
+      // El cruce (ficha 16 y cada 17 fichas después) gira 90° conectando
+      // la fila actual con la siguiente. Cada fila es completa (16 fichas),
+      // así los cruces alternan entre el extremo derecho y el izquierdo.
       const endX = rowEndX!;
       const fx = dir === 1 ? endX + 0.5 : endX - 0.5;
       const fy = stackSign === 1 ? rowY + 0.5 : rowY - 0.5;
-      const rotation: 0 | 180 = stackSign === 1 ? 0 : 180;
+      const rotation: 0 | 180 = foldRotation;
       placements.push({
         x: fx,
         y: fy,
@@ -87,6 +92,7 @@ function computeLayout(tiles: Tile[], stackSign: 1 | -1): Layout {
         orientation: "vertical",
         rotation,
       });
+      foldRotation = foldRotation === 0 ? 180 : 0;
       dir = dir === 1 ? -1 : 1;
       rowY += stackSign === 1 ? 2 : -2;
       inRow = 0;
@@ -95,7 +101,7 @@ function computeLayout(tiles: Tile[], stackSign: 1 | -1): Layout {
       // (sin superponerse: solo hace contacto por el borde).
       pendingFirstCenter = fx;
       rowEndX = null;
-      nextFold += 1 + SHORT_ROW_LEN;
+      nextFold += 1 + ROW_LEN;
       continue;
     }
 

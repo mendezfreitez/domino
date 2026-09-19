@@ -135,19 +135,15 @@ export function Game({
   const winnerTeam = result?.winnerTeam ?? state.winnerTeam;
   const winnerTeamLabel = winnerTeam !== null ? teamName(winnerTeam) : null;
 
-  const youSeat = state.players.find((p) => p.id === youId) ?? state.players[0];
-  const seatAt = (offset: number): PlayerType | undefined =>
-    state.players.find(
-      (p) => (p.position - youSeat.position + 4) % 4 === offset
-    );
+  // Todos los jugadores ven la misma vista fija según la posición en la mesa:
+  // 1 = izquierda, 2 = enfrente, 3 = derecha (abajo = tu propia mano).
+  const seatAtPosition = (position: number): PlayerType | undefined =>
+    state.players.find((p) => p.position === position);
 
-  // Asientos en sentido antihorario desde tu posición (abajo):
-  // 0 = tú (abajo), 1 = rival (izquierda = siguiente turno),
-  // 2 = compañero (enfrente), 3 = rival (derecha).
   const seatCards = [
-    { className: "game-seat-top", player: seatAt(2) },
-    { className: "game-seat-left", player: seatAt(1) },
-    { className: "game-seat-right", player: seatAt(3) },
+    { className: "game-seat-top", player: seatAtPosition(2) },
+    { className: "game-seat-left", player: seatAtPosition(1) },
+    { className: "game-seat-right", player: seatAtPosition(3) },
   ].filter(
     (seat): seat is { className: string; player: PlayerType } =>
       seat.player !== undefined
