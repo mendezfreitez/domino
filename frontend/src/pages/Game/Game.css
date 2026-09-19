@@ -44,6 +44,73 @@
   letter-spacing: 0.12em;
 }
 
+.game-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.game-scoreboard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.45rem 0.7rem;
+  min-width: 150px;
+}
+
+.game-scoreboard-label {
+  color: var(--text-dim);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.game-score {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+}
+
+.game-score-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 999px;
+  flex: none;
+}
+
+.game-score-dot.team-0 {
+  background: var(--accent);
+}
+
+.game-score-dot.team-1 {
+  background: var(--turn);
+}
+
+.game-score-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.game-score.team-0 .game-score-name {
+  color: var(--accent);
+}
+
+.game-score.team-1 .game-score-name {
+  color: var(--turn);
+}
+
+.game-score-points {
+  margin-left: auto;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
 .game-room-code {
   font-weight: 700;
   letter-spacing: 0.2em;

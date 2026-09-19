@@ -135,15 +135,18 @@ export function Game({
   const winnerTeam = result?.winnerTeam ?? state.winnerTeam;
   const winnerTeamLabel = winnerTeam !== null ? teamName(winnerTeam) : null;
 
-  // Todos los jugadores ven la misma vista fija según la posición en la mesa:
-  // 1 = izquierda, 2 = enfrente, 3 = derecha (abajo = tu propia mano).
-  const seatAtPosition = (position: number): PlayerType | undefined =>
-    state.players.find((p) => p.position === position);
+  // Asientos relativos a cada jugador: tú estás abajo (tu propia mano),
+  // tu compañero arriba y los dos rivales a los costados. Ningún asiento
+  // muestra al propio jugador en tercera persona.
+  const you = state.players.find((p) => p.id === youId);
+  const otherPlayers = state.players.filter((p) => p.id !== youId);
+  const partner = otherPlayers.find((p) => p.team === you?.team);
+  const rivals = otherPlayers.filter((p) => p.team !== you?.team);
 
   const seatCards = [
-    { className: "game-seat-top", player: seatAtPosition(2) },
-    { className: "game-seat-left", player: seatAtPosition(1) },
-    { className: "game-seat-right", player: seatAtPosition(3) },
+    { className: "game-seat-top", player: partner },
+    { className: "game-seat-left", player: rivals[0] },
+    { className: "game-seat-right", player: rivals[1] },
   ].filter(
     (seat): seat is { className: string; player: PlayerType } =>
       seat.player !== undefined
@@ -161,9 +164,28 @@ export function Game({
       >
         <div className="game">
           <header className="game-header">
-        <div className="game-room">
-          <span className="game-room-label">Sala</span>
-          <span className="game-room-code">{state.roomId}</span>
+        <div className="game-header-left">
+          <div className="game-room">
+            <span className="game-room-label">Sala</span>
+            <span className="game-room-code">{state.roomId}</span>
+          </div>
+          <div className="game-scoreboard" aria-label="Marcador de puntos">
+            <span className="game-scoreboard-label">Marcador</span>
+            <div className="game-score team-0">
+              <span className="game-score-dot team-0" aria-hidden="true" />
+              <span className="game-score-name">{teamName(0)}</span>
+              <span className="game-score-points">
+                {state.teamPips["0"] ?? 0} pts
+              </span>
+            </div>
+            <div className="game-score team-1">
+              <span className="game-score-dot team-1" aria-hidden="true" />
+              <span className="game-score-name">{teamName(1)}</span>
+              <span className="game-score-points">
+                {state.teamPips["1"] ?? 0} pts
+              </span>
+            </div>
+          </div>
         </div>
         <span className="game-turn-status">
           {isFinished

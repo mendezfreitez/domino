@@ -128,8 +128,8 @@ g5.state.hands = {
 };
 
 g5.advanceTurn();
-assert(g5.state.currentPlayer === "p1", "el turno pasa simplemente al siguiente jugador (p1)");
-assert(g5.currentMustPass() === true, "p1 sin fichas jugables está en estado de pasar");
+assert(g5.state.currentPlayer === "p3", "el turno pasa en sentido antihorario al siguiente jugador (p3)");
+assert(g5.currentMustPass() === true, "p3 sin fichas jugables está en estado de pasar");
 assert(g5.canAnyonePlay() === true, "p2 sí puede jugar: aún no hay bloqueo");
 
 console.log("--- Ganador por mano vacía ---");
@@ -161,7 +161,7 @@ g7.state.hands = {
   p3: [tile("6-6")],
 };
 g7.advanceTurn();
-assert(g7.state.currentPlayer === "p1", "un jugador sin fichas no se salta: espera su PASO");
+assert(g7.state.currentPlayer === "p3", "un jugador sin fichas no se salta: espera su PASO (sentido antihorario → p3)");
 assert(g7.canAnyonePlay() === false, "nadie puede jugar con el extremo [5]: hay bloqueo");
 g7.finishBlocked();
 assert(g7.state.status === "finished", "sin jugadas posibles la partida termina");

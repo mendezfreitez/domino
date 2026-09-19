@@ -273,8 +273,10 @@ export class DominoGame {
 
   private nextPlayerId(fromId: string): string {
     const player = this.state.players.find((p) => p.id === fromId)!;
+    const count = this.state.players.length;
+    // Los turnos avanzan en sentido antihorario alrededor de la mesa.
     const next = this.state.players[
-      (player.position + 1) % this.state.players.length
+      (player.position - 1 + count) % count
     ];
     return next.id;
   }
