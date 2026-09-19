@@ -17,7 +17,7 @@ export interface PublicGameState {
   yourPlayerId: string;
   yourHand: DominoTile[];
   handCounts: Record<string, number>;
-  teamPips: Record<string, number>;
+  teamScores: [number, number];
   mustPass: boolean;
 }
 

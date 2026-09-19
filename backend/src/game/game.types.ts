@@ -25,6 +25,7 @@ export interface GameState {
   winnerId: string | null;
   winnerTeam: number | null;
   winnerReason: WinnerReason | null;
+  teamScores: [number, number];
 }
 
 export interface PublicGameState {
@@ -39,7 +40,7 @@ export interface PublicGameState {
   yourPlayerId: string;
   yourHand: DominoTile[];
   handCounts: Record<string, number>;
-  teamPips: Record<string, number>;
+  teamScores: [number, number];
   mustPass: boolean;
 }
 

@@ -68,6 +68,10 @@ const doubleSixHolder = players.find((p) =>
   (game.state.hands[p.id] ?? []).some((t) => t.id === "6-6")
 )!;
 assert(game.state.currentPlayer === doubleSixHolder.id, "empieza el jugador con [6|6]");
+assert(
+  game.state.teamScores[0] === 0 && game.state.teamScores[1] === 0,
+  "el marcador inicia en 0-0"
+);
 
 console.log("--- Validación de jugadas ---");
 
@@ -138,7 +142,12 @@ const g6 = new DominoGame("TEST6", makePlayers());
 g6.start();
 g6.state.board = [];
 g6.state.currentPlayer = "p0";
-g6.state.hands = { p0: [tile("4-4")], p1: [], p2: [], p3: [] };
+g6.state.hands = {
+  p0: [tile("4-4")],
+  p1: [tile("2-2")],
+  p2: [],
+  p3: [tile("3-3")],
+};
 const win = g6.playTile("p0", "4-4");
 assert(win.valid === true, "primera ficha se juega con el tablero vacío");
 assert(g6.hasWinner() === true, "hay ganador con la mano vacía");
@@ -147,6 +156,8 @@ assert(g6.state.status === "finished", "la partida termina");
 assert(g6.state.winnerId === "p0", "el ganador es p0");
 assert(g6.state.winnerTeam === 0, "gana el equipo de p0 (equipo 0)");
 assert(g6.state.winnerReason === "empty-hand", "el motivo es mano vacía");
+assert(g6.state.teamScores[0] === 10, "el equipo ganador suma los pips del rival (10)");
+assert(g6.state.teamScores[1] === 0, "el equipo perdedor queda en 0");
 
 console.log("--- Finalización por bloqueo ---");
 
@@ -168,6 +179,8 @@ assert(g7.state.status === "finished", "sin jugadas posibles la partida termina"
 assert(g7.state.winnerReason === "blocked", "el motivo es bloqueo");
 assert(g7.state.winnerTeam === 0, "gana el equipo con menos puntos (equipo 0: 10 vs 12)");
 assert(g7.state.winnerId === "p0", "el mejor jugador del equipo ganador es p0 (3 puntos)");
+assert(g7.state.teamScores[0] === 12, "el equipo ganador suma los pips del rival (12)");
+assert(g7.state.teamScores[1] === 0, "el equipo perdedor queda en 0");
 
 console.log("--- Estado público (privacidad de fichas) ---");
 

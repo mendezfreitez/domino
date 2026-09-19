@@ -24,6 +24,7 @@ export class DominoGame {
       winnerId: null,
       winnerTeam: null,
       winnerReason: null,
+      teamScores: [0, 0],
     };
   }
 
@@ -74,6 +75,7 @@ export class DominoGame {
     this.state.winnerTeam = null;
     this.state.winnerReason = null;
     this.state.currentPlayer = this.findStartingPlayer().id;
+    this.state.teamScores = [0, 0];
   }
 
   boardLeft(): number | null {
@@ -181,6 +183,9 @@ export class DominoGame {
     this.state.winnerTeam = this.blockingWinnerTeam();
     this.state.winnerId = this.bestPlayerInTeam(this.state.winnerTeam);
     this.state.winnerReason = "blocked";
+    this.state.teamScores[this.state.winnerTeam] += this.rivalPips(
+      this.state.winnerTeam
+    );
     this.state.status = "finished";
   }
 
@@ -194,6 +199,11 @@ export class DominoGame {
     this.state.winnerId = playerId;
     this.state.winnerTeam = playerId ? this.teamOf(playerId) : null;
     this.state.winnerReason = "empty-hand";
+    if (this.state.winnerTeam !== null) {
+      this.state.teamScores[this.state.winnerTeam] += this.rivalPips(
+        this.state.winnerTeam
+      );
+    }
     this.state.status = "finished";
   }
 
@@ -209,11 +219,6 @@ export class DominoGame {
     for (const player of this.state.players) {
       handCounts[player.id] = (this.state.hands[player.id] ?? []).length;
     }
-    const teamPips: Record<string, number> = {};
-    for (const player of this.state.players) {
-      const team = String(player.team);
-      teamPips[team] = (teamPips[team] ?? 0) + this.handPips(player.id);
-    }
     return {
       roomId: this.state.roomId,
       players: this.state.players,
@@ -226,7 +231,7 @@ export class DominoGame {
       yourPlayerId: playerId,
       yourHand: this.state.hands[playerId] ?? [],
       handCounts,
-      teamPips,
+      teamScores: [...this.state.teamScores],
       mustPass: this.currentMustPass(),
     };
   }
@@ -296,6 +301,10 @@ export class DominoGame {
     return this.state.players
       .filter((p) => p.team === team)
       .reduce((sum, p) => sum + this.handPips(p.id), 0);
+  }
+
+  private rivalPips(winnerTeam: number): number {
+    return this.teamPips(1 - winnerTeam);
   }
 
   private blockingWinnerTeam(): number {

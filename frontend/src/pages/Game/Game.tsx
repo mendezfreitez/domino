@@ -175,14 +175,14 @@ export function Game({
               <span className="game-score-dot team-0" aria-hidden="true" />
               <span className="game-score-name">{teamName(0)}</span>
               <span className="game-score-points">
-                {state.teamPips["0"] ?? 0} pts
+                {(state.teamScores?.[0] ?? 0)} pts
               </span>
             </div>
             <div className="game-score team-1">
               <span className="game-score-dot team-1" aria-hidden="true" />
               <span className="game-score-name">{teamName(1)}</span>
               <span className="game-score-points">
-                {state.teamPips["1"] ?? 0} pts
+                {(state.teamScores?.[1] ?? 0)} pts
               </span>
             </div>
           </div>
