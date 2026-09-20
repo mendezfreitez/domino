@@ -19,6 +19,7 @@ export interface PublicGameState {
   handCounts: Record<string, number>;
   teamScores: [number, number];
   mustPass: boolean;
+  revealedHands: Record<string, DominoTile[]>;
 }
 
 export interface RoomInfo {

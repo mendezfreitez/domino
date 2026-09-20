@@ -219,6 +219,15 @@ export class DominoGame {
     for (const player of this.state.players) {
       handCounts[player.id] = (this.state.hands[player.id] ?? []).length;
     }
+
+    let revealedHands: Record<string, DominoTile[]> = {};
+    if (this.state.status === "finished") {
+      revealedHands = {};
+      for (const player of this.state.players) {
+        revealedHands[player.id] = [...(this.state.hands[player.id] ?? [])];
+      }
+    }
+
     return {
       roomId: this.state.roomId,
       players: this.state.players,
@@ -233,6 +242,7 @@ export class DominoGame {
       handCounts,
       teamScores: [...this.state.teamScores],
       mustPass: this.currentMustPass(),
+      revealedHands,
     };
   }
 

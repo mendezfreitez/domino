@@ -354,7 +354,7 @@ export function Game({
             <p>Esa ficha no va en ese lado del tablero.</p>
             <button
               className="primary"
-              style={{padding: '6px 18px'}}
+              style={{ padding: "6px 18px" }}
               onClick={() => setShowInvalidDrop(false)}
             >
               Entendido
@@ -362,6 +362,50 @@ export function Game({
           </div>
         </div>
       )}
+
+      {isFinished && (
+        <div className="reveal-overlay" role="dialog" aria-modal="true">
+          <div className="reveal-modal">
+            <h2 className="reveal-title">Fichas de los demás jugadores</h2>
+            <p className="reveal-subtitle">
+              Así quedaron las manos al terminar la partida.
+            </p>
+
+            <ul className="reveal-list">
+              {otherPlayers.map((player) => {
+                const tiles = state.revealedHands?.[player.id] ?? [];
+                return (
+                  <li key={player.id} className={`reveal-item team-${player.team}`}>
+                    <span className="reveal-player team-name">
+                      {player.name}
+                    </span>
+                    {tiles.length === 0 ? (
+                      <span className="reveal-empty">sin fichas</span>
+                    ) : (
+                      <span className="reveal-tiles">
+                        {tiles.map((tile) => (
+                          <span className="reveal-tile" key={tile.id}>
+                            <DominoTile
+                              tile={tile}
+                              size="hand"
+                              orientation="vertical"
+                            />
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+
+            <button className="primary" onClick={onLeave}>
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+
 
       {dragTileId && dragTile && dragGhost && (
         <div
