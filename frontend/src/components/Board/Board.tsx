@@ -118,6 +118,7 @@ export function Board({
         ref={boardRef}
         className={`board board-empty${dragTileId ? " drop-active" : ""}`}
         style={{ "--board-tile-h": `${tileH}px` } as CSSProperties}
+        data-drop-side="left"
         {...dropHandlers("left", onDropTile)}
       >
         <p>El tablero está vacío. Arrastra una ficha aquí.</p>
@@ -155,6 +156,7 @@ export function Board({
             className={zoneClass(dropLeftValid)}
             style={zoneStyle(leftZone)}
             aria-label="Colocar ficha a la izquierda"
+            data-drop-side="left"
             {...dropHandlers("left", onDropTile)}
           />
         ) : null}
@@ -184,6 +186,7 @@ export function Board({
             className={zoneClass(dropRightValid)}
             style={zoneStyle(rightZone)}
             aria-label="Colocar ficha a la derecha"
+            data-drop-side="right"
             {...dropHandlers("right", onDropTile)}
           />
         ) : null}

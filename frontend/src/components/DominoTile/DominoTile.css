@@ -79,10 +79,17 @@
   cursor: grabbing;
 }
 
-.domino-tile.dimmed {
-  opacity: 0.4;
-}
-
 .domino-tile.disabled {
   opacity: 0.6;
+}
+
+.domino-tile {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.tile-svg {
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
 }

@@ -1,9 +1,9 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
-import type { DragEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, MouseEvent } from "react";
 import { Board } from "../../components/Board/Board";
 import { Player } from "../../components/Player/Player";
 import { PlayerHand } from "../../components/PlayerHand/PlayerHand";
+import { DominoTile } from "../../components/DominoTile/DominoTile";
 import { teamName, type Player as PlayerType } from "../../types/Player";
 import type { GameFinishedPayload, PublicGameState } from "../../types/Game";
 import "./Game.css";
@@ -33,6 +33,9 @@ export function Game({
   onLeave,
 }: GameProps) {
   const [dragTileId, setDragTileId] = useState<string | null>(null);
+  const [dragGhost, setDragGhost] = useState<{ x: number; y: number } | null>(
+    null
+  );
   const [showInvalidDrop, setShowInvalidDrop] = useState<boolean>(false);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState<number>(1);
@@ -104,18 +107,87 @@ export function Game({
     onPlayTile(tileId, side);
   };
 
-  const handleTileDragStart = (
+  // Arrastre manual: mousedown inicia, mousemove mueve el fantasma y
+  // mouseup resuelve la ficha con elementFromPoint sobre [data-drop-side].
+  const latestDrag = useRef({
+    tileId: null as string | null,
+    yourHand: state.yourHand,
+    boardLeft,
+    boardRight,
+    onPlayTile,
+  });
+  latestDrag.current.tileId = dragTileId;
+  latestDrag.current.yourHand = state.yourHand;
+  latestDrag.current.boardLeft = boardLeft;
+  latestDrag.current.boardRight = boardRight;
+  latestDrag.current.onPlayTile = onPlayTile;
+
+  useEffect(() => {
+    if (!dragTileId) return;
+    document.body.classList.add("domino-dragging");
+
+    const onMove = (event: globalThis.MouseEvent) => {
+      event.preventDefault();
+      setDragGhost({ x: event.clientX, y: event.clientY });
+    };
+
+    const onUp = (event: globalThis.MouseEvent) => {
+      const current = latestDrag.current;
+      const tileId = current.tileId;
+      const el = document.elementFromPoint(event.clientX, event.clientY);
+      const zone =
+        el instanceof Element ? el.closest("[data-drop-side]") : null;
+      if (zone && tileId) {
+        const side = zone.getAttribute("data-drop-side") as
+          | "left"
+          | "right";
+        const tile = current.yourHand.find((t) => t.id === tileId);
+        if (tile) {
+          const valid =
+            side === "left"
+              ? current.boardLeft === null ||
+                tile.left === current.boardLeft ||
+                tile.right === current.boardLeft
+              : current.boardRight === null ||
+                tile.left === current.boardRight ||
+                tile.right === current.boardRight;
+          if (valid) {
+            current.onPlayTile(tileId, side);
+          } else {
+            setShowInvalidDrop(true);
+          }
+        }
+      }
+      setDragTileId(null);
+      setDragGhost(null);
+    };
+
+    const onLeave = () => {
+      setDragTileId(null);
+      setDragGhost(null);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    document.addEventListener("mouseleave", onLeave);
+    return () => {
+      document.body.classList.remove("domino-dragging");
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.removeEventListener("mouseleave", onLeave);
+    };
+  }, [dragTileId]);
+
+  const handleTileMouseDown = (
     tileId: string,
-    event: DragEvent<HTMLElement>
+    event: MouseEvent<HTMLElement>
   ) => {
+    if (event.button !== 0) return;
+    if (state.status !== "playing" || !isYourTurn) return;
+    event.preventDefault();
     setShowInvalidDrop(false);
     setDragTileId(tileId);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", tileId);
-  };
-
-  const handleTileDragEnd = () => {
-    setDragTileId(null);
+    setDragGhost({ x: event.clientX, y: event.clientY });
   };
 
   const dragTile = state.yourHand.find((t) => t.id === dragTileId) ?? null;
@@ -248,13 +320,11 @@ export function Game({
       {error && <div className="error-banner game-error">{error}</div>}
 
       <section className="game-hand-area">
-        <PlayerHand
+<PlayerHand
           tiles={state.yourHand}
           isYourTurn={isYourTurn}
           playableIds={playableIds}
-          dragTileId={dragTileId}
-          onTileDragStart={handleTileDragStart}
-          onTileDragEnd={handleTileDragEnd}
+          onTileMouseDown={handleTileMouseDown}
         />
         {mustPass && (
           <div className="game-pass-area">
@@ -290,6 +360,22 @@ export function Game({
               Entendido
             </button>
           </div>
+        </div>
+      )}
+
+      {dragTileId && dragTile && dragGhost && (
+        <div
+          className="drag-ghost"
+          style={
+            {
+              left: dragGhost.x,
+              top: dragGhost.y,
+              transform: `translate(-50%, -85%) scale(${scale})`,
+            } as CSSProperties
+          }
+          aria-hidden="true"
+        >
+          <DominoTile tile={dragTile} size="hand" orientation="vertical" />
         </div>
       )}
     </div>

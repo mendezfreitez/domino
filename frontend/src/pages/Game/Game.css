@@ -301,6 +301,23 @@
   }
 }
 
+.drag-ghost {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5));
+}
+
+.domino-tile .tile-svg {
+  pointer-events: none;
+}
+
+body.domino-dragging {
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pass-modal {
     animation: none;
