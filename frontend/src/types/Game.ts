@@ -1,7 +1,7 @@
 import type { DominoTile } from "./Domino";
 import type { Player } from "./Player";
 
-export type GameStatus = "waiting" | "playing" | "finished";
+export type GameStatus = "waiting" | "playing" | "round-over" | "finished";
 
 export type WinnerReason = "empty-hand" | "blocked" | "player-left";
 

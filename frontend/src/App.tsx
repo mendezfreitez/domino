@@ -5,6 +5,7 @@ import { Game } from "./pages/Game/Game";
 import {
   emitPassTurn,
   emitPlayTile,
+  emitStartNextRound,
   socket,
 } from "./services/socket";
 import type { GameFinishedPayload, PublicGameState } from "./types/Game";
@@ -165,6 +166,7 @@ export default function App() {
         onPlayTile={handlePlayTile}
         onPass={handlePass}
         onLeave={handleLeave}
+        onStartNextRound={emitStartNextRound}
       />
     );
   }

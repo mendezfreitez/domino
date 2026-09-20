@@ -225,6 +225,7 @@ export function Game({
   );
 
   const finishedReason = result?.winnerReason ?? state.winnerReason;
+  const isRoundOver = state.status === "round-over";
   const isFinished = state.status === "finished";
 
   return (
@@ -399,9 +400,15 @@ export function Game({
               })}
             </ul>
 
-            <button className="primary" onClick={onLeave}>
-              Cerrar
-            </button>
+            {isRoundOver ? (
+              <button className="primary" onClick={onStartNextRound}>
+                Siguiente ronda
+              </button>
+            ) : (
+              <button className="primary" onClick={onLeave}>
+                Cerrar
+              </button>
+            )}
           </div>
         </div>
       )}

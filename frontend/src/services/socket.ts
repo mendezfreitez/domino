@@ -21,6 +21,10 @@ export function emitStartGame(): void {
   socket.emit("start_game");
 }
 
+export function emitStartNextRound(): void {
+  socket.emit("start_next_round");
+}
+
 export function emitMovePlayer(playerId: string, team: number): void {
   socket.emit("move_player", { playerId, team });
 }
