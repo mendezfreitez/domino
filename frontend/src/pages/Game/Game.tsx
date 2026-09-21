@@ -210,17 +210,23 @@ export function Game({
   const winnerTeamLabel = winnerTeam !== null ? teamName(winnerTeam) : null;
 
   // Asientos relativos a cada jugador: tú estás abajo (tu propia mano),
-  // tu compañero arriba y los dos rivales a los costados. Ningún asiento
-  // muestra al propio jugador en tercera persona.
+  // tu compañero arriba y los dos rivales a los costados. La mesa es una
+  // rotación fija y coherente (posición 0 abajo, 1 izquierda, 2 arriba,
+  // 3 derecha), de modo que el sentido de los turnos es siempre antihorario
+  // desde cualquier asiento: quien te sigue (posición −1) se sienta a tu
+  // derecha, luego el compañero arriba y el anterior a tu izquierda.
   const you = state.players.find((p) => p.id === youId);
   const otherPlayers = state.players.filter((p) => p.id !== youId);
-  const partner = otherPlayers.find((p) => p.team === you?.team);
-  const rivals = otherPlayers.filter((p) => p.team !== you?.team);
+  const mod4 = (n: number) => ((n % 4) + 4) % 4;
+  const seatAt = (offset: number) =>
+    you === undefined
+      ? undefined
+      : state.players.find((p) => p.position === mod4(you.position + offset));
 
   const seatCards = [
-    { className: "game-seat-top", player: partner },
-    { className: "game-seat-left", player: rivals[0] },
-    { className: "game-seat-right", player: rivals[1] },
+    { className: "game-seat-top", player: seatAt(2) },
+    { className: "game-seat-left", player: seatAt(1) },
+    { className: "game-seat-right", player: seatAt(3) },
   ].filter(
     (seat): seat is { className: string; player: PlayerType } =>
       seat.player !== undefined
