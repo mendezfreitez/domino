@@ -1086,6 +1086,31 @@ La implementación será considerada correcta cuando:
 
 ---
 
+# 37.1 Estabilidad del tablero al redibujar
+
+La cadena debe construirse de forma **incremental**:
+
+* El **ancla** es la **primera ficha de la ronda** (la semilla), nunca la "ficha central" del tablero actual.
+* Las fichas nuevas se añaden **solo a los extremos** de la cadena ya existente.
+* Las fichas ya colocadas **conservan siempre sus coordenadas de rejilla**: no se reordenan ni se re-anclan al crecer el tablero.
+
+El renderizado debe usar un **marco fijo por ronda**:
+
+* La **escala** (`tileH`) y el **origen** de render se calculan **una sola vez por ronda** a partir del tamaño del contenedor y de una cabida reservada típica del serpentín (una partida completa de 28 fichas suele ocupar ~40 unidades de ancho × ~26 de alto; el ancho puede crecer algo más si el giro se pospone por dobles).
+* **Nunca** se recalculan al crecer la cadena (solo al redimensionar la ventana o al iniciar una ronda nueva).
+* En consecuencia, la **posición en píxeles** de cada ficha ya dibujada no cambia durante toda la ronda.
+
+Si la cadena crece más allá de la cabida reservada (partida extrema o ventana muy pequeña), el área del tablero permite **desplazarse** (scroll) para ver los extremos: la vista se mueve, no las fichas.
+
+Criterios adicionales:
+
+* [ ] Las fichas ya colocadas no cambian de posición al redibujar el tablero.
+* [ ] El ancla de la cadena permanece fija durante toda la ronda.
+* [ ] La escala y el origen de render se fijan al inicio de la ronda y solo se recalculan al redimensionar la ventana.
+* [ ] Las fichas nuevas se añaden únicamente a los extremos de la cadena.
+
+---
+
 # 38. Regla de oro
 
 La representación visual nunca debe romper la lógica del dominó.

@@ -53,7 +53,7 @@ export interface ChainBuilder {
 }
 
 export const DEFAULT_CONFIG: BoardConfig = {
-  mainLineLength: 14,
+  mainLineLength: 16,
   tileGap: 0.02,
   rightTurnDirection: "UP",
   leftTurnDirection: "DOWN",
@@ -356,24 +356,40 @@ export function predictNextPlacement(
   return { x: g.x, y: g.y, orientation: g.orientation };
 }
 
-export function buildChainLayout(
-  tiles: DominoTile[],
-  config: BoardConfig = DEFAULT_CONFIG
-): ChainLayout {
-  if (tiles.length === 0) {
-    return {
-      placements: [],
-      minX: 0,
-      maxX: 0,
-      minY: 0,
-      maxY: 0,
-      leftEnd: null,
-      rightEnd: null,
-    };
+export function builderToLayout(builder: ChainBuilder): ChainLayout {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const p of builder.placements) {
+    const w = p.orientation === "horizontal" ? 2 : 1;
+    const h = p.orientation === "horizontal" ? 1 : 2;
+    minX = Math.min(minX, p.x - w / 2);
+    maxX = Math.max(maxX, p.x + w / 2);
+    minY = Math.min(minY, p.y - h / 2);
+    maxY = Math.max(maxY, p.y + h / 2);
   }
 
-  const anchorIndex = Math.floor((tiles.length - 1) / 2);
-  const anchor = tiles[anchorIndex];
+  return {
+    placements: builder.placements,
+    minX,
+    maxX,
+    minY,
+    maxY,
+    leftEnd: builder.leftEnd,
+    rightEnd: builder.rightEnd,
+  };
+}
+
+/**
+ * Crea una cadena nueva con la ficha dada como ancla. El ancla permanece fija
+ * durante toda la ronda: las fichas posteriores solo se añaden a los extremos
+ * con `placeTile`, de modo que ninguna ficha ya colocada cambia de posición.
+ */
+export function createChain(
+  anchor: DominoTile,
+  config: BoardConfig = DEFAULT_CONFIG
+): ChainBuilder {
   const anchorIsDouble = isDouble(anchor);
   const anchorOrientation: Orientation = anchorIsDouble
     ? "vertical"
@@ -418,6 +434,28 @@ export function buildChainLayout(
   builder.leftEnd.lastPlacementIndex = 0;
   builder.rightEnd.lastPlacementIndex = 0;
 
+  return builder;
+}
+
+export function buildChainLayout(
+  tiles: DominoTile[],
+  config: BoardConfig = DEFAULT_CONFIG
+): ChainLayout {
+  if (tiles.length === 0) {
+    return {
+      placements: [],
+      minX: 0,
+      maxX: 0,
+      minY: 0,
+      maxY: 0,
+      leftEnd: null,
+      rightEnd: null,
+    };
+  }
+
+  const anchorIndex = Math.floor((tiles.length - 1) / 2);
+  const builder = createChain(tiles[anchorIndex], config);
+
   for (let i = 1; i < tiles.length; i++) {
     const rightIdx = anchorIndex + i;
     const leftIdx = anchorIndex - i;
@@ -425,26 +463,5 @@ export function buildChainLayout(
     if (leftIdx >= 0) placeTile(tiles[leftIdx], "left", builder, config);
   }
 
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-  for (const p of builder.placements) {
-    const w = p.orientation === "horizontal" ? 2 : 1;
-    const h = p.orientation === "horizontal" ? 1 : 2;
-    minX = Math.min(minX, p.x - w / 2);
-    maxX = Math.max(maxX, p.x + w / 2);
-    minY = Math.min(minY, p.y - h / 2);
-    maxY = Math.max(maxY, p.y + h / 2);
-  }
-
-  return {
-    placements: builder.placements,
-    minX,
-    maxX,
-    minY,
-    maxY,
-    leftEnd: builder.leftEnd,
-    rightEnd: builder.rightEnd,
-  };
+  return builderToLayout(builder);
 }
