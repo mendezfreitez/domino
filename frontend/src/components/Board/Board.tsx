@@ -22,13 +22,16 @@ const BOARD_PAD_Y = 12;
 // unidades de ancho). Norma de cruce: cada lado cuenta sus fichas desde la
 // primera pieza (el ancla no cuenta); con 6 contadas, la 7ª colocación de la
 // derecha gira hacia arriba y la 7ª de la izquierda hacia abajo (se mantiene
-// la postergación por dobles). Así, una partida completa de 28 fichas ocupa
-// típicamente ~28-30 unidades de ancho × ~18 de alto, aunque un tramo vertical
-// muy cargado puede acercarse a ±14 y recurrir al scroll. El marco de render se
-// calcula una sola vez por ronda a partir de esta cabida: las fichas nunca se
-// recolocan ni cambian de tamaño al crecer el tablero. Si una partida extrema o
-// una ventana muy pequeña exceden la cabida, el contenedor permite desplazarse
-// (scroll) sin mover fichas.
+// la postergación por dobles). Norma de reorientación: el tramo vertical cuenta
+// 2 fichas (cruce + 1 recta) y la 3ª vuelve a orientarse en horizontal (arriba
+// → izquierda, abajo → derecha), solo si no es doble. Así la altura queda
+// acotada (~±3.5 unidades) y el crecimiento se traslada al eje X: una partida
+// completa de 28 fichas ocupa típicamente ~28-40 unidades de ancho y casi nunca
+// necesita desplazamiento vertical. El marco de render se calcula una sola vez
+// por ronda a partir de esta cabida: las fichas nunca se recolocan ni cambian de
+// tamaño al crecer el tablero. Si una partida extrema o una ventana muy pequeña
+// exceden la cabida, el contenedor permite desplazarse (scroll) sin mover
+// fichas.
 const RESERVED_W_UNITS = 40;
 const RESERVED_H_UNITS = 28;
 const TILE_SCALE = 2.2;
@@ -286,7 +289,6 @@ export function Board({
   const toX = (u: number) => (u - bounds.minX + 1) * th;
   const toY = (u: number) => (u - bounds.minY + 1) * th;
   const layoutW = (bounds.maxX - bounds.minX + 2) * th;
-  const layoutH = (bounds.maxY - bounds.minY + 2) * th;
   const layerLeft = frame.originX + (bounds.minX - 1) * th;
   const layerTop = frame.originY + (bounds.minY - 1) * th;
 
@@ -310,7 +312,7 @@ export function Board({
         className="board-layer"
         style={{
           width: layoutW,
-          height: layoutH,
+          // height: layoutH,
           left: layerLeft,
           top: layerTop,
         }}

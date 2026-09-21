@@ -145,6 +145,34 @@ Si cuando toca cruzar (6 fichas contadas en el lado), el giro correspondiera a:
 
 entonces **no se gira**: esa ficha se coloca recta y el cruce queda **pospuesto** hasta que aparezca una ficha no doble que esté conectada a otra no doble.
 
+## 5.2 Reorientación del tramo vertical (norma del segundo giro)
+
+Para evitar que el tramo vertical crezca sin límite y genere overflow vertical en `div.board`, una vez realizado el cruce el tramo vertical cuenta **2 fichas hacia arriba/abajo (incluido el cruce, que es la 1ª del tramo)**; la **3ª ficha** del tramo vuelve a orientarse **90 grados en horizontal**:
+
+* lado **derecho** (tramo que sube) → las siguientes fichas se orientan hacia la **izquierda**,
+* lado **izquierdo** (tramo que baja) → las siguientes fichas se orientan hacia la **derecha**.
+
+Conceptualmente (derecha: sube y luego va a la izquierda; izquierda: baja y luego va a la derecha):
+
+```text
+        ◀──── [ ][ ][ ] [ ][ ]          (derecha ya reorientada: sigue a la izquierda)
+              [ ]
+              |
+[ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]   (línea principal: cruce derecho arriba, izquierdo abajo)
+              |
+              [ ]
+        [ ][ ][ ] [ ][ ] ────▶           (izquierda ya reorientada: sigue a la derecha)
+```
+
+El tramo vertical de cada lado queda acotado al **cruce + 1 recta (2 fichas contadas)** y la **3ª** vuelve a la horizontal, limitando la altura del tablero.
+
+Restricciones de la reorientación (solo aplican al segundo giro; el cruce inicial conserva la regla 5.1):
+
+* **La ficha que se reorienta debe ser no doble.** Si al alcanzar las 2 fichas contadas del tramo toca reorientar en una ficha doble, esa ficha se coloca recta y la reorientación queda **pospuesta** hasta la siguiente ficha no doble del tramo.
+* Si la ficha de reorientación es **no doble pero está antecedida por una doble** (la doble en un tramo vertical se dibuja perpendicular, en forma de "T"), la ficha **sí se reorienta** y se conecta **con el extremo lateral de esa doble** (el extremo izquierdo para `UP → LEFT` y el derecho para `DOWN → RIGHT`), evitando así colisionar con la propia "T".
+
+Un lado solo se reorienta una vez: después de la reorientación el extremo continúa creciendo en horizontal (izquierda o derecha según el lado) y ya no vuelve a girar.
+
 ---
 
 # 6. Regla de dirección de los cruces
@@ -215,6 +243,8 @@ type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT";
 interface ChainEnd {
     direction: Direction;
     hasTurned: boolean;
+    hasReoriented: boolean;   // ya hizo el 2º giro (reorientación horizontal)
+    segCount: number;         // fichas del tramo vertical desde el cruce (incluido)
 }
 ```
 
@@ -223,12 +253,16 @@ Ejemplo:
 ```ts
 leftEnd = {
     direction: "DOWN",
-    hasTurned: true
+    hasTurned: true,
+    hasReoriented: false,
+    segCount: 3
 };
 
 rightEnd = {
     direction: "UP",
-    hasTurned: true
+    hasTurned: true,
+    hasReoriented: false,
+    segCount: 3
 };
 ```
 
@@ -579,6 +613,10 @@ interface ChainEnd {
 
     hasTurned: boolean;
 
+    hasReoriented: boolean;   // ya se reorientó en horizontal
+
+    segCount: number;         // tramo vertical contado desde el cruce
+
     turnDirection?: "UP" | "DOWN";
 }
 ```
@@ -626,7 +664,21 @@ Una vez que el extremo derecho gira hacia arriba:
 direction = "UP"
 ```
 
-las siguientes fichas deben continuar hacia arriba hasta que la lógica determine otro cambio de dirección.
+las siguientes fichas continúan hacia arriba mientras el tramo vertical no alcance las **2 fichas contadas (incluido el cruce)**. Al colocarse la 3ª ficha del tramo, el extremo se reorienta en horizontal y **cambia de dirección**:
+
+* derecha (`UP`) → **`LEFT`**,
+* izquierda (`DOWN`) → **`RIGHT`**.
+
+```text
+RIGHT
+  ↓
+  ↓
+  ↓
+  ↓
+  ◀───────────
+```
+
+Tras la reorientación, la dirección queda fija (izquierda o derecha) y el extremo ya **no vuelve a girar** (`hasReoriented = true`).
 
 ---
 
@@ -954,6 +1006,24 @@ extremo izquierdo  → dirección vertical A
 extremo derecho    → dirección vertical opuesta
 ```
 
+### 33.1 Segundo giro (reorientación horizontal)
+
+Cuando cada tramo vertical cuenta **2 fichas hacia arriba/abajo (incluido el cruce)**, la siguiente ficha (la 3ª del tramo) se reorienta en horizontal hacia el centro:
+
+```text
+              [7'][8'][9']
+                   |        ← [10'] reorienta: LEFT
+[1'][2'][3'][4'][5'][6'][A][1][2][3][4][5][6]
+                   |
+             [7][8][9]
+                   |        ← [10] reorienta: RIGHT
+```
+
+* El tramo derecho (arriba) reorienta las siguientes fichas hacia la **izquierda** (`7[8][9] → [10][11]`… hacia la izquierda).
+* El tramo izquierdo (abajo) reorienta las siguientes fichas hacia la **derecha**.
+
+Con esto la altura queda acotada a unas **±3.5 unidades** (en lugar de crecer hacia ±14), evitando el overflow vertical de `div.board`. El crecimiento se traslada al eje horizontal, que puede usar scroll si la cabida (40 × 28 unidades) se excede.
+
 ---
 
 # 34. Reglas para dobles después de un cruce
@@ -1066,6 +1136,11 @@ La implementación será considerada correcta cuando:
 * [ ] Los extremos puedan continuar la cadena.
 * [ ] Los cruces sean de 90°.
 * [ ] El giro se posponga si toca en una ficha doble o en una ficha pegada a una doble.
+* [ ] Tras el cruce, el tramo vertical cuente 2 fichas (incluido el cruce) y la siguiente (3ª del tramo) se reoriente en horizontal: derecha → izquierda, izquierda → derecha.
+* [ ] La reorientación solo se ejecute sobre fichas no dobles; si toca en una doble, se posponga a la siguiente ficha del tramo.
+* [ ] Si la ficha de reorientación es no doble antecedida por una doble, se conecte con el extremo lateral de esa doble sin solaparse con ella.
+* [ ] Tras la reorientación el extremo ya no vuelva a girar y continúe en horizontal.
+* [ ] La altura del tablero quede acotada (≈ ±3.5 unidades) y no se genere overflow vertical en `div.board`.
 * [ ] El extremo izquierdo y derecho utilicen direcciones verticales opuestas.
 * [ ] Las fichas dobles sean detectadas correctamente.
 * [ ] Los dobles se coloquen inmediatamente después de la ficha anterior.
@@ -1091,7 +1166,7 @@ La cadena debe construirse de forma **incremental**:
 
 El renderizado debe usar un **marco fijo por ronda**:
 
-* La **escala** (`tileH`) y el **origen** de render se calculan **una sola vez por ronda** a partir del tamaño del contenedor y de una cabida reservada típica del serpentín (con la norma de cruce por lado —6 contadas desde la primera pieza—, una partida completa de 28 fichas suele ocupar ~29 unidades de ancho × ~18 de alto, aunque un tramo vertical muy cargado puede acercarse a ±14 y recurrir al scroll).
+* La **escala** (`tileH`) y el **origen** de render se calculan **una sola vez por ronda** a partir del tamaño del contenedor y de una cabida reservada típica del serpentín (con la norma de cruce por lado —6 contadas desde la primera pieza— y la reorientación del tramo vertical a las 2 fichas —incluido el cruce—, la altura queda acotada a ≈ ±3.5 unidades y el crecimiento se traslada al eje horizontal: una partida completa de 28 fichas suele ocupar ~28-40 unidades de ancho × ~7 de alto, sin necesitar desplazamiento vertical).
 * **Nunca** se recalculan al crecer la cadena (solo al redimensionar la ventana o al iniciar una ronda nueva).
 * En consecuencia, la **posición en píxeles** de cada ficha ya dibujada no cambia durante toda la ronda.
 

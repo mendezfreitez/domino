@@ -24,6 +24,10 @@ export interface ChainEnd {
   direction: Direction;
   connectionValue: number;
   hasTurned: boolean;
+  /** La reorientación (2º giro del tramo vertical hacia la horizontal). */
+  hasReoriented: boolean;
+  /** Fichas colocadas en el tramo vertical desde el cruce (incluido el cruce). */
+  segCount: number;
   turnDirection: TurnDirection;
   connectionSide: ConnectionSide;
   lastPlacementIndex: number;
@@ -33,6 +37,7 @@ export interface ChainEnd {
 
 export interface BoardConfig {
   turnLimitPerSide: number;
+  reorientLimit: number;
   tileGap: number;
   rightTurnDirection: TurnDirection;
   leftTurnDirection: TurnDirection;
@@ -56,6 +61,7 @@ export interface ChainBuilder {
 
 export const DEFAULT_CONFIG: BoardConfig = {
   turnLimitPerSide: 6,
+  reorientLimit: 2,
   tileGap: 0.02,
   rightTurnDirection: "UP",
   leftTurnDirection: "DOWN",
@@ -149,6 +155,8 @@ interface Geometry {
   nextDirection: Direction;
   nextConnectionValue: number;
   turned: boolean;
+  /** La ficha ejecuta la reorientación horizontal (2º giro del tramo vertical). */
+  reoriented: boolean;
 }
 
 interface GeometryInput {
@@ -191,6 +199,7 @@ function computeGeometry(
         nextDirection: direction,
         nextConnectionValue: input.freeValue,
         turned: true,
+        reoriented: false,
       };
     }
     return {
@@ -204,6 +213,48 @@ function computeGeometry(
       nextDirection: direction,
       nextConnectionValue: input.freeValue,
       turned: true,
+      reoriented: false,
+    };
+  }
+
+  // Reorientación (2º giro): una vez cruzado, el tramo vertical cuenta
+  // `reorientLimit` fichas (incluido el cruce, que es la 1ª); con el valor por
+  // defecto (2) la 3ª ficha del tramo vuelve a orientarse en horizontal
+  // (derecha: arriba → izquierda; izquierda: abajo → derecha). Si esa ficha va
+  // antecedida por una doble (que en tramo vertical se dibuja perpendicular, en
+  // "T"), la ficha se conecta con el extremo lateral de esa doble en lugar de
+  // posponer como en el cruce inicial.
+  const wantReorient =
+    end.hasTurned &&
+    !end.hasReoriented &&
+    end.segCount >= config.reorientLimit &&
+    !input.isDoubleTile;
+
+  if (wantReorient) {
+    const up = end.direction === "UP";
+    const direction: Direction = up ? "LEFT" : "RIGHT";
+    let cx: number;
+    let cy: number;
+    if (prevIsDouble && prev) {
+      const prevHalf = prev.orientation === "horizontal" ? 1 : 0.5;
+      cx = up ? prev.x - prevHalf - 1 : prev.x + prevHalf + 1;
+      cy = prev.y;
+    } else {
+      cx = up ? end.x - 1.5 : end.x + 1.5;
+      cy = up ? end.y + 0.5 : end.y - 0.5;
+    }
+    return {
+      x: cx,
+      y: cy,
+      orientation: "horizontal",
+      direction,
+      connectionSide: CONNECTION_SIDE[direction],
+      nextX: up ? cx - 1 : cx + 1,
+      nextY: cy,
+      nextDirection: direction,
+      nextConnectionValue: input.freeValue,
+      turned: false,
+      reoriented: true,
     };
   }
 
@@ -248,6 +299,7 @@ function computeGeometry(
     nextDirection: direction,
     nextConnectionValue: input.freeValue,
     turned: false,
+    reoriented: false,
   };
 }
 
@@ -319,7 +371,16 @@ export function placeTile(
     connValue
   );
 
-  if (g.turned) end.hasTurned = true;
+  if (g.turned) {
+    end.hasTurned = true;
+    // El cruce es la 1ª ficha del tramo vertical; las siguientes rectas van
+    // sumando hasta que `segCount` alcanza el límite de reorientación.
+    end.segCount += 1;
+  } else if (g.reoriented) {
+    end.hasReoriented = true;
+  } else if (end.hasTurned && !end.hasReoriented) {
+    end.segCount += 1;
+  }
   end.direction = g.nextDirection;
   end.connectionValue = g.nextConnectionValue;
   end.connectionSide = CONNECTION_SIDE[g.nextDirection];
@@ -411,6 +472,8 @@ export function createChain(
       direction: "LEFT",
       connectionValue: anchor.left,
       hasTurned: false,
+      hasReoriented: false,
+      segCount: 0,
       turnDirection: config.leftTurnDirection,
       connectionSide: "RIGHT",
       lastPlacementIndex: -1,
@@ -422,6 +485,8 @@ export function createChain(
       direction: "RIGHT",
       connectionValue: anchor.right,
       hasTurned: false,
+      hasReoriented: false,
+      segCount: 0,
       turnDirection: config.rightTurnDirection,
       connectionSide: "LEFT",
       lastPlacementIndex: -1,
