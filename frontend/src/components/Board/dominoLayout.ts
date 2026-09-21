@@ -28,6 +28,11 @@ export interface ChainEnd {
   hasReoriented: boolean;
   /** Fichas colocadas en el tramo vertical desde el cruce (incluido el cruce). */
   segCount: number;
+  /**
+   * La 2ª ficha del tramo (la inmediata al cruce) fue doble: en ese lado el
+   * tramo cuenta una ficha más y la reorientación la ejecuta la 4ª, no la 3ª.
+   */
+  segSecondDouble: boolean;
   turnDirection: TurnDirection;
   connectionSide: ConnectionSide;
   lastPlacementIndex: number;
@@ -220,14 +225,19 @@ function computeGeometry(
   // Reorientación (2º giro): una vez cruzado, el tramo vertical cuenta
   // `reorientLimit` fichas (incluido el cruce, que es la 1ª); con el valor por
   // defecto (2) la 3ª ficha del tramo vuelve a orientarse en horizontal
-  // (derecha: arriba → izquierda; izquierda: abajo → derecha). Si esa ficha va
-  // antecedida por una doble (que en tramo vertical se dibuja perpendicular, en
-  // "T"), la ficha se conecta con el extremo lateral de esa doble en lugar de
-  // posponer como en el cruce inicial.
+  // (derecha: arriba → izquierda; izquierda: abajo → derecha). Excepción: si la
+  // 2ª ficha del tramo (la inmediata al cruce) es doble, `segSecondDouble`
+  // retrasa una posición la reorientación en ese lado (la ejecuta la 4ª).
+  // Si la ficha de reorientación va antecedida por una doble (que en tramo
+  // vertical se dibuja perpendicular, en "T"), se conecta con el extremo lateral
+  // de esa doble en lugar de posponer como en el cruce inicial.
+  const reorientLimit = end.segSecondDouble
+    ? config.reorientLimit + 1
+    : config.reorientLimit;
   const wantReorient =
     end.hasTurned &&
     !end.hasReoriented &&
-    end.segCount >= config.reorientLimit &&
+    end.segCount >= reorientLimit &&
     !input.isDoubleTile;
 
   if (wantReorient) {
@@ -379,6 +389,9 @@ export function placeTile(
   } else if (g.reoriented) {
     end.hasReoriented = true;
   } else if (end.hasTurned && !end.hasReoriented) {
+    // La 2ª ficha del tramo (segCount===1 antes de sumar) siendo doble retrasa
+    // la reorientación una ficha más en este lado (la 4ª en vez de la 3ª).
+    if (end.segCount === 1 && isDouble(tile)) end.segSecondDouble = true;
     end.segCount += 1;
   }
   end.direction = g.nextDirection;
@@ -474,6 +487,7 @@ export function createChain(
       hasTurned: false,
       hasReoriented: false,
       segCount: 0,
+      segSecondDouble: false,
       turnDirection: config.leftTurnDirection,
       connectionSide: "RIGHT",
       lastPlacementIndex: -1,
@@ -487,6 +501,7 @@ export function createChain(
       hasTurned: false,
       hasReoriented: false,
       segCount: 0,
+      segSecondDouble: false,
       turnDirection: config.rightTurnDirection,
       connectionSide: "LEFT",
       lastPlacementIndex: -1,

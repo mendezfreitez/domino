@@ -152,6 +152,8 @@ Para evitar que el tramo vertical crezca sin límite y genere overflow vertical 
 * lado **derecho** (tramo que sube) → las siguientes fichas se orientan hacia la **izquierda**,
 * lado **izquierdo** (tramo que baja) → las siguientes fichas se orientan hacia la **derecha**.
 
+**Excepción (retraso por doble en 2ª posición):** si la **2ª ficha del tramo** (la inmediatamente posterior al cruce) es una **ficha doble**, en **ese lado** el tramo cuenta una ficha más y la reorientación la ejecuta la **4ª ficha** del tramo (no la 3ª).
+
 Conceptualmente (derecha: sube y luego va a la izquierda; izquierda: baja y luego va a la derecha):
 
 ```text
@@ -245,6 +247,7 @@ interface ChainEnd {
     hasTurned: boolean;
     hasReoriented: boolean;   // ya hizo el 2º giro (reorientación horizontal)
     segCount: number;         // fichas del tramo vertical desde el cruce (incluido)
+    segSecondDouble: boolean; // la 2ª ficha del tramo fue doble → reorienta la 4ª
 }
 ```
 
@@ -616,6 +619,8 @@ interface ChainEnd {
     hasReoriented: boolean;   // ya se reorientó en horizontal
 
     segCount: number;         // tramo vertical contado desde el cruce
+
+    segSecondDouble: boolean; // 2ª ficha del tramo doble → reorienta la 4ª
 
     turnDirection?: "UP" | "DOWN";
 }
@@ -1137,6 +1142,7 @@ La implementación será considerada correcta cuando:
 * [ ] Los cruces sean de 90°.
 * [ ] El giro se posponga si toca en una ficha doble o en una ficha pegada a una doble.
 * [ ] Tras el cruce, el tramo vertical cuente 2 fichas (incluido el cruce) y la siguiente (3ª del tramo) se reoriente en horizontal: derecha → izquierda, izquierda → derecha.
+* [ ] Si la 2ª ficha del tramo (la inmediata al cruce) es doble, ese lado retrase la reorientación y la ejecute la 4ª ficha del tramo.
 * [ ] La reorientación solo se ejecute sobre fichas no dobles; si toca en una doble, se posponga a la siguiente ficha del tramo.
 * [ ] Si la ficha de reorientación es no doble antecedida por una doble, se conecte con el extremo lateral de esa doble sin solaparse con ella.
 * [ ] Tras la reorientación el extremo ya no vuelva a girar y continúe en horizontal.
@@ -1166,7 +1172,7 @@ La cadena debe construirse de forma **incremental**:
 
 El renderizado debe usar un **marco fijo por ronda**:
 
-* La **escala** (`tileH`) y el **origen** de render se calculan **una sola vez por ronda** a partir del tamaño del contenedor y de una cabida reservada típica del serpentín (con la norma de cruce por lado —6 contadas desde la primera pieza— y la reorientación del tramo vertical a las 2 fichas —incluido el cruce—, la altura queda acotada a ≈ ±3.5 unidades y el crecimiento se traslada al eje horizontal: una partida completa de 28 fichas suele ocupar ~28-40 unidades de ancho × ~7 de alto, sin necesitar desplazamiento vertical).
+* La **escala** (`tileH`) y el **origen** de render se calculan **una sola vez por ronda** a partir del tamaño del contenedor y de una cabida reservada típica del serpentín (con la norma de cruce por lado —6 contadas desde la primera pieza— y la reorientación del tramo vertical a las 2 fichas —incluido el cruce; 3 si la 2ª ficha del tramo es doble—, la altura queda acotada a ≈ ±3.5-4.5 unidades y el crecimiento se traslada al eje horizontal: una partida completa de 28 fichas suele ocupar ~28-40 unidades de ancho × ~7-9 de alto, sin necesitar desplazamiento vertical).
 * **Nunca** se recalculan al crecer la cadena (solo al redimensionar la ventana o al iniciar una ronda nueva).
 * En consecuencia, la **posición en píxeles** de cada ficha ya dibujada no cambia durante toda la ronda.
 

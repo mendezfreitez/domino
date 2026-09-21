@@ -24,10 +24,12 @@ const BOARD_PAD_Y = 12;
 // derecha gira hacia arriba y la 7ª de la izquierda hacia abajo (se mantiene
 // la postergación por dobles). Norma de reorientación: el tramo vertical cuenta
 // 2 fichas (cruce + 1 recta) y la 3ª vuelve a orientarse en horizontal (arriba
-// → izquierda, abajo → derecha), solo si no es doble. Así la altura queda
-// acotada (~±3.5 unidades) y el crecimiento se traslada al eje X: una partida
-// completa de 28 fichas ocupa típicamente ~28-40 unidades de ancho y casi nunca
-// necesita desplazamiento vertical. El marco de render se calcula una sola vez
+// → izquierda, abajo → derecha), solo si no es doble; excepción: si la 2ª ficha
+// del tramo es doble, este lado cuenta una ficha más y la reorienta la 4ª. Así
+// la altura queda acotada (~±3.5-4.5 unidades) y el crecimiento se traslada al
+// eje X: una partida completa de 28 fichas ocupa típicamente ~28-40 unidades de
+// ancho y casi nunca necesita desplazamiento vertical. El marco de render se
+// calcula una sola vez
 // por ronda a partir de esta cabida: las fichas nunca se recolocan ni cambian de
 // tamaño al crecer el tablero. Si una partida extrema o una ventana muy pequeña
 // exceden la cabida, el contenedor permite desplazarse (scroll) sin mover
