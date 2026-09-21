@@ -68,29 +68,29 @@ La partida comienza formando una **línea principal horizontal**.
 La línea principal debe tener como mínimo:
 
 ```text
-15 fichas
+16 fichas
 ```
 
-Antes de alcanzar las 15 fichas, no se deben realizar cruces.
+Antes de alcanzar las 16 fichas, no se deben realizar cruces.
 
 La línea debe crecer inicialmente de forma horizontal.
 
 Ejemplo conceptual:
 
 ```text
-[ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
+[ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
 ```
 
 ---
 
 # 4. Longitud mínima de la línea principal
 
-La línea principal debe contener **como mínimo 15 fichas antes de realizar cualquier cruce**.
+La línea principal debe contener **como mínimo 16 fichas antes de realizar cualquier cruce**.
 
 Por lo tanto:
 
 ```text
-cantidad < 15
+cantidad < 16
     ↓
 continuar línea recta
 ```
@@ -98,18 +98,18 @@ continuar línea recta
 Cuando:
 
 ```text
-cantidad >= 15
+cantidad >= 16
 ```
 
 se habilita la posibilidad de realizar un cruce.
 
-El cruce no debe producirse antes de que existan 15 fichas en la línea principal.
+El cruce no debe producirse antes de que existan 16 fichas en la línea principal.
 
 ---
 
 # 5. Cruces de 90 grados
 
-Una vez alcanzadas las 15 fichas, la cadena debe poder continuar mediante un giro de **90 grados**.
+Una vez alcanzadas las 16 fichas, la cadena debe poder continuar mediante un giro de **90 grados**.
 
 El giro debe producirse en ambos extremos de la línea principal.
 
@@ -119,10 +119,26 @@ Conceptualmente:
                 [ ][ ][ ]
                        |
                        |
-[ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
+[ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
 ```
 
 Sin embargo, ambos extremos deben utilizar direcciones opuestas.
+
+## 5.1 Restricción de fichas dobles en el giro
+
+El giro de 90° solo puede ejecutarse sobre una ficha **no doble** conectada a otra **no doble**.
+
+Es decir, la ficha que gira debe cumplir ambas condiciones:
+
+* no ser una ficha doble, y
+* estar conectada a una ficha anterior que tampoco sea doble.
+
+Si al alcanzar el umbral el giro correspondiera a:
+
+* una ficha **doble**, o
+* una ficha **inmediatamente pegada a una doble** (su ficha anterior en la cadena es doble),
+
+entonces **no se gira**: esa ficha se coloca recta y el cruce queda **pospuesto** hasta que aparezca una ficha no doble que esté conectada a otra no doble.
 
 ---
 
@@ -573,13 +589,13 @@ rightEnd
 
 # 22. Cambio de dirección
 
-Antes de alcanzar las 15 fichas:
+Antes de alcanzar las 16 fichas:
 
 ```text
 LEFT  ←────────────→ RIGHT
 ```
 
-Después de alcanzar las 15 fichas:
+Después de alcanzar las 16 fichas:
 
 ```text
 LEFT  └────────────┘ RIGHT
@@ -908,27 +924,27 @@ Debe respetar primero las reglas del dominó.
 
 # 33. Ejemplo conceptual completo
 
-Supongamos que la línea alcanza 15 fichas:
+Supongamos que la línea alcanza 16 fichas:
 
 ```text
-[1][2][3][4][5][6][7][8][9][10][11][12][13][14][15]
+[1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16]
 ```
 
 A partir de ese momento:
 
 ```text
-                 [16]
                  [17]
                  [18]
+                 [19]
                    |
-[1][2][3]...[14][15]
+[1][2][3]...[15][16]
 ```
 
 Mientras el extremo contrario:
 
 ```text
                    |
-[1][2][3]...[14][15]
+[1][2][3]...[15][16]
                    |
                   [X]
                   [X]
@@ -1049,11 +1065,12 @@ Todo eso debe ser responsabilidad del sistema de ordenamiento.
 La implementación será considerada correcta cuando:
 
 * [ ] Existan exactamente 28 fichas únicas.
-* [ ] La línea principal tenga al menos 15 fichas antes del primer cruce.
+* [ ] La línea principal tenga al menos 16 fichas antes del primer cruce.
 * [ ] La línea inicial sea horizontal.
 * [ ] Las fichas se conecten correctamente.
 * [ ] Los extremos puedan continuar la cadena.
 * [ ] Los cruces sean de 90°.
+* [ ] El giro se posponga si toca en una ficha doble o en una ficha pegada a una doble.
 * [ ] El extremo izquierdo y derecho utilicen direcciones verticales opuestas.
 * [ ] Las fichas dobles sean detectadas correctamente.
 * [ ] Los dobles se coloquen inmediatamente después de la ficha anterior.

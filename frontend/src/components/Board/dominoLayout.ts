@@ -53,7 +53,7 @@ export interface ChainBuilder {
 }
 
 export const DEFAULT_CONFIG: BoardConfig = {
-  mainLineLength: 17,
+  mainLineLength: 14,
   tileGap: 0.02,
   rightTurnDirection: "UP",
   leftTurnDirection: "DOWN",
@@ -158,10 +158,18 @@ function computeGeometry(
   config: BoardConfig,
   prev: PositionedTile | null
 ): Geometry {
-  const wantTurn = shouldTurn(totalPlaced, end, config);
   const prevIsDouble = prev !== null && isDouble(prev.tile);
+  // El giro de 90° solo puede ejecutarse sobre una ficha NO doble conectada a
+  // otra NO doble. Si al alcanzar el umbral toca girar en una ficha doble o en
+  // una ficha inmediata a una doble, no se gira: la ficha se coloca recta y el
+  // cruce se pospone hasta que aparezca una ficha válida (hasTurned sigue en
+  // false y los siguientes tramos vuelven a intentarlo).
+  const wantTurn =
+    shouldTurn(totalPlaced, end, config) &&
+    !input.isDoubleTile &&
+    !prevIsDouble;
 
-  if (wantTurn && !prevIsDouble) {
+  if (wantTurn) {
     const direction = end.turnDirection;
     const o = end.direction === "RIGHT" ? 1 : -1;
     if (direction === "UP") {
