@@ -11,7 +11,7 @@ export interface Player {
   team: number;
 }
 
-export type GameStatus = "waiting" | "playing" | "finished";
+export type GameStatus = "waiting" | "playing" | "round-over" | "finished";
 
 export type WinnerReason = "empty-hand" | "blocked" | "player-left";
 
@@ -26,6 +26,10 @@ export interface GameState {
   winnerTeam: number | null;
   winnerReason: WinnerReason | null;
   teamScores: [number, number];
+  roundNumber: number;
+  currentStarterId: string | null;
+  matchWinnerTeam: number | null;
+  targetScore: number;
 }
 
 export interface PublicGameState {
@@ -41,6 +45,9 @@ export interface PublicGameState {
   yourHand: DominoTile[];
   handCounts: Record<string, number>;
   teamScores: [number, number];
+  roundNumber: number;
+  targetScore: number;
+  matchWinnerTeam: number | null;
   mustPass: boolean;
   revealedHands: Record<string, DominoTile[]>;
 }
@@ -56,3 +63,5 @@ export const TILES_PER_PLAYER = 7;
 export const TEAM_COUNT = 2;
 
 export const PLAYERS_PER_TEAM = 2;
+
+export const MATCH_TARGET_SCORE = 100;

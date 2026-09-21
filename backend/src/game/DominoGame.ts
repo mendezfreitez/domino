@@ -1,18 +1,28 @@
 import {
   DominoTile,
   GameState,
+  MATCH_TARGET_SCORE,
   MoveResult,
   Player,
   PublicGameState,
   TILES_PER_PLAYER,
+  WinnerReason,
 } from "./game.types.js";
 
 type BoardSide = "left" | "right";
 
+export interface DominoGameOptions {
+  targetScore?: number;
+}
+
 export class DominoGame {
   public state: GameState;
 
-  constructor(roomId: string, players: Player[]) {
+  constructor(
+    roomId: string,
+    players: Player[],
+    options?: DominoGameOptions
+  ) {
     const sortedPlayers = [...players].sort((a, b) => a.position - b.position);
     this.state = {
       roomId,
@@ -25,6 +35,10 @@ export class DominoGame {
       winnerTeam: null,
       winnerReason: null,
       teamScores: [0, 0],
+      roundNumber: 0,
+      currentStarterId: null,
+      matchWinnerTeam: null,
+      targetScore: options?.targetScore ?? MATCH_TARGET_SCORE,
     };
   }
 
@@ -67,15 +81,44 @@ export class DominoGame {
     if (this.state.players.length !== 4) {
       throw new Error("Se necesitan 4 jugadores para iniciar la partida.");
     }
+    this.startNewRound();
+  }
+
+  startNextRound(): void {
+    if (this.state.status !== "round-over") {
+      throw new Error("La partida no está en estado de ronda terminada.");
+    }
+    this.startNewRound();
+  }
+
+  private startNewRound(): void {
     const tiles = DominoGame.shuffleTiles(DominoGame.createTiles());
     this.state.hands = DominoGame.dealTiles(tiles, this.state.players);
     this.state.board = [];
-    this.state.status = "playing";
+
+    if (this.state.status === "waiting") {
+      // Primera ronda: empieza quien tenga el doble-seis (o el primer asiento).
+      this.state.roundNumber = 1;
+      this.state.currentStarterId = this.findStartingPlayer().id;
+      this.state.teamScores = [0, 0];
+      this.state.matchWinnerTeam = null;
+    } else {
+      // Rondas siguientes: inicia el jugador siguiente en sentido antihorario
+      // respecto a quien inició la ronda anterior. El marcador se conserva.
+      const previousStarter =
+        this.state.currentStarterId ?? this.state.players[0]?.id;
+      if (!previousStarter) {
+        throw new Error("No hay jugadores para iniciar la ronda.");
+      }
+      this.state.roundNumber += 1;
+      this.state.currentStarterId = this.nextPlayerId(previousStarter);
+    }
+
     this.state.winnerId = null;
     this.state.winnerTeam = null;
     this.state.winnerReason = null;
-    this.state.currentPlayer = this.findStartingPlayer().id;
-    this.state.teamScores = [0, 0];
+    this.state.currentPlayer = this.state.currentStarterId;
+    this.state.status = "playing";
   }
 
   boardLeft(): number | null {
@@ -180,13 +223,8 @@ export class DominoGame {
   }
 
   finishBlocked(): void {
-    this.state.winnerTeam = this.blockingWinnerTeam();
-    this.state.winnerId = this.bestPlayerInTeam(this.state.winnerTeam);
-    this.state.winnerReason = "blocked";
-    this.state.teamScores[this.state.winnerTeam] += this.rivalPips(
-      this.state.winnerTeam
-    );
-    this.state.status = "finished";
+    const winnerTeam = this.blockingWinnerTeam();
+    this.finishRound(winnerTeam, this.bestPlayerInTeam(winnerTeam), "blocked");
   }
 
   hasWinner(): boolean {
@@ -196,21 +234,41 @@ export class DominoGame {
 
   finishWithWinner(): void {
     const playerId = this.state.currentPlayer;
-    this.state.winnerId = playerId;
-    this.state.winnerTeam = playerId ? this.teamOf(playerId) : null;
-    this.state.winnerReason = "empty-hand";
-    if (this.state.winnerTeam !== null) {
-      this.state.teamScores[this.state.winnerTeam] += this.rivalPips(
-        this.state.winnerTeam
-      );
+    const winnerTeam = playerId ? this.teamOf(playerId) : null;
+    if (winnerTeam === null) {
+      this.state.winnerId = playerId;
+      this.state.winnerReason = "empty-hand";
+      this.state.status = "finished";
+      return;
     }
-    this.state.status = "finished";
+    this.finishRound(winnerTeam, playerId, "empty-hand");
+  }
+
+  private finishRound(
+    winnerTeam: number,
+    winnerId: string | null,
+    reason: WinnerReason
+  ): void {
+    this.state.winnerTeam = winnerTeam;
+    this.state.winnerId = winnerId;
+    this.state.winnerReason = reason;
+    this.state.teamScores[winnerTeam] += this.rivalPips(winnerTeam);
+    this.state.currentPlayer = null;
+
+    if (this.state.teamScores[winnerTeam] >= this.state.targetScore) {
+      this.state.matchWinnerTeam = winnerTeam;
+      this.state.status = "finished";
+    } else {
+      this.state.status = "round-over";
+    }
   }
 
   finishBecausePlayerLeft(): void {
     this.state.winnerId = null;
     this.state.winnerTeam = null;
     this.state.winnerReason = "player-left";
+    this.state.matchWinnerTeam = null;
+    this.state.currentPlayer = null;
     this.state.status = "finished";
   }
 
@@ -221,7 +279,10 @@ export class DominoGame {
     }
 
     let revealedHands: Record<string, DominoTile[]> = {};
-    if (this.state.status === "finished") {
+    if (
+      this.state.status === "round-over" ||
+      this.state.status === "finished"
+    ) {
       revealedHands = {};
       for (const player of this.state.players) {
         revealedHands[player.id] = [...(this.state.hands[player.id] ?? [])];
@@ -241,6 +302,9 @@ export class DominoGame {
       yourHand: this.state.hands[playerId] ?? [],
       handCounts,
       teamScores: [...this.state.teamScores],
+      roundNumber: this.state.roundNumber,
+      targetScore: this.state.targetScore,
+      matchWinnerTeam: this.state.matchWinnerTeam,
       mustPass: this.currentMustPass(),
       revealedHands,
     };

@@ -803,3 +803,51 @@ Escalabilidad
 ```
 
 No implementar ninguna de ellas hasta que el MVP descrito anteriormente esté funcionando correctamente.
+
+---
+
+# 29. Rondas y match por puntos
+
+Una partida se compone de **rondas** y el objetivo es acumular puntos como **match**.
+
+## Estados
+
+```typescript
+type GameStatus = "waiting" | "playing" | "round-over" | "finished";
+```
+
+* `waiting` — sala en el lobby.
+* `playing` — ronda en curso.
+* `round-over` — ronda terminada: se revelan las manos y se ofrece el botón "Siguiente ronda".
+* `finished` — match terminado (un equipo alcanzó el objetivo o un jugador se fue).
+
+## Objetivo del match
+
+* Por defecto, gana el match el primer equipo en alcanzar **100 puntos**.
+* El objetivo es **configurable** al crear una partida (constante `MATCH_TARGET_SCORE`,
+  opción `targetScore` del constructor de `DominoGame`).
+* Al terminar cada ronda (mano vacía o bloqueo), el equipo ganador suma los pips
+  acumulados por el equipo rival a su marcador (`teamScores`), que **persiste entre rondas**.
+
+## Jugador inicial de cada ronda
+
+* **Ronda 1:** el jugador que tenga el doble-seis `[6|6]` (si nadie, el primer asiento).
+* **Rondas siguientes:** el jugador siguiente al que inició la ronda anterior, en
+  **sentido antihorario** (rotación por asientos).
+
+## Transiciones
+
+```text
+waiting ──(start_game)──► playing ──(todos jugaron hasta mano vacía o bloqueo)──► round-over
+                                                                                       │
+                                              (ningún equipo alcanzó el objetivo)      │
+round-over ──(start_next_round, cualquier jugador)──► playing                         │
+                                                                                       │
+                                              (un equipo alcanzó el objetivo)          ▼
+                                                                                     finished
+```
+
+* `start_next_round`: lo puede emitir **cualquier jugador** de la sala (no solo el host),
+  siempre que la partida esté en `round-over`.
+* Si un jugador se desconecta durante una ronda, la partida pasa directamente a `finished`
+  (razón `player-left`), sin ofrecer "Siguiente ronda".

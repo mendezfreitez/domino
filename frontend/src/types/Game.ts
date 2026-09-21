@@ -18,6 +18,9 @@ export interface PublicGameState {
   yourHand: DominoTile[];
   handCounts: Record<string, number>;
   teamScores: [number, number];
+  roundNumber: number;
+  targetScore: number;
+  matchWinnerTeam: number | null;
   mustPass: boolean;
   revealedHands: Record<string, DominoTile[]>;
 }
@@ -34,4 +37,5 @@ export interface GameFinishedPayload {
   winnerId: string | null;
   winnerTeam: number | null;
   winnerReason: WinnerReason | null;
+  matchWinnerTeam: number | null;
 }

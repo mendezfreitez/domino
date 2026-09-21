@@ -21,6 +21,7 @@ interface GameProps {
   onPlayTile: (tileId: string, side: "left" | "right") => void;
   onPass: () => void;
   onLeave: () => void;
+  onStartNextRound: () => void;
 }
 
 export function Game({
@@ -31,6 +32,7 @@ export function Game({
   onPlayTile,
   onPass,
   onLeave,
+  onStartNextRound,
 }: GameProps) {
   const [dragTileId, setDragTileId] = useState<string | null>(null);
   const [dragGhost, setDragGhost] = useState<{ x: number; y: number } | null>(
@@ -243,7 +245,9 @@ export function Game({
             <span className="game-room-code">{state.roomId}</span>
           </div>
           <div className="game-scoreboard" aria-label="Marcador de puntos">
-            <span className="game-scoreboard-label">Marcador</span>
+            <span className="game-scoreboard-label">
+              Marcador · Ronda {state.roundNumber || 1}
+            </span>
             <div className="game-score team-0">
               <span className="game-score-dot team-0" aria-hidden="true" />
               <span className="game-score-name">{teamName(0)}</span>
@@ -258,14 +262,21 @@ export function Game({
                 {(state.teamScores?.[1] ?? 0)} pts
               </span>
             </div>
+            <span className="game-scoreboard-label">
+              Objetivo: {state.targetScore ?? 100} pts
+            </span>
           </div>
         </div>
         <span className="game-turn-status">
           {isFinished
-            ? "Partida terminada"
-            : isYourTurn
-              ? "Es tu turno"
-              : `Turno de ${currentPlayer?.name ?? "…"}`}
+            ? state.matchWinnerTeam !== null
+              ? `Partida terminada — gana ${teamName(state.matchWinnerTeam)}`
+              : "Partida terminada"
+            : isRoundOver
+              ? `Ronda ${state.roundNumber} terminada`
+              : isYourTurn
+                ? "Es tu turno"
+                : `Turno de ${currentPlayer?.name ?? "…"}`}
         </span>
         <button className="game-leave" onClick={onLeave}>
           Abandonar
@@ -300,19 +311,33 @@ export function Game({
         </main>
       </section>
 
-      {isFinished && (
+      {(isRoundOver || isFinished) && (
         <div className="game-result">
           {finishedReason === "player-left" ? (
             <p>Un jugador abandonó la partida. Juego terminado.</p>
-          ) : finishedReason === "blocked" ? (
+          ) : state.matchWinnerTeam !== null ? (
             <p>
-              Partida bloqueada. Gana <strong>{winnerTeamLabel ?? "…"}</strong> por
-              tener menos puntos.
+              ¡Partida terminada! El equipo{" "}
+              <strong>{teamName(state.matchWinnerTeam)}</strong> gana el match
+              con {state.teamScores?.[state.matchWinnerTeam] ?? 0} pts.
             </p>
           ) : (
             <p>
-              ¡Ganó <strong>{winnerTeamLabel ?? "…"}</strong>!
-              {winner && <> (<strong>{winner.name}</strong> se quedó sin fichas)</>}
+              Ronda {state.roundNumber} —{" "}
+              {finishedReason === "blocked" ? (
+                <>
+                  tablero bloqueado. Gana el equipo{" "}
+                  <strong>{winnerTeamLabel ?? "…"}</strong> por tener menos
+                  puntos.
+                </>
+              ) : (
+                <>
+                  ¡ganó el equipo <strong>{winnerTeamLabel ?? "…"}</strong>!
+                  {winner && (
+                    <> (<strong>{winner.name}</strong> se quedó sin fichas)</>
+                  )}
+                </>
+              )}
             </p>
           )}
         </div>
@@ -364,12 +389,14 @@ export function Game({
         </div>
       )}
 
-      {isFinished && (
+      {(isRoundOver || isFinished) && (
         <div className="reveal-overlay" role="dialog" aria-modal="true">
           <div className="reveal-modal">
             <h2 className="reveal-title">Fichas de los demás jugadores</h2>
             <p className="reveal-subtitle">
-              Así quedaron las manos al terminar la partida.
+              {isRoundOver
+                ? `Así quedaron las manos al terminar la ronda ${state.roundNumber}.`
+                : "Así quedaron las manos al terminar la partida."}
             </p>
 
             <ul className="reveal-list">

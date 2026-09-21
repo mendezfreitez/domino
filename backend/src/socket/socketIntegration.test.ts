@@ -231,13 +231,50 @@ async function main(): Promise<void> {
     const invalidOwn = await fake as { message: string };
     assert(invalidOwn.message.includes("posees"), "no se puede jugar una ficha que no se posee");
 
-    console.log("--- Partida completa (jugadas automáticas) ---");
+    console.log("--- Partida completa (jugadas automáticas, con rondas) ---");
 
     let moves = 0;
-    const maxMoves = 120;
-    while (moves < maxMoves) {
+    let roundsCompleted = 0;
+    const maxRounds = 3;
+    const maxMoves = 300;
+    while (moves < maxMoves && roundsCompleted < maxRounds) {
       const anyFinished = sessions.find((s) => s.state?.status === "finished");
       if (anyFinished) break;
+
+      const anyRoundOver = sessions.find((s) => s.state?.status === "round-over");
+      if (anyRoundOver) {
+        const roundBefore = sessions[0].state!.roundNumber;
+        const scoresBefore = sessions[0].state!.teamScores;
+        const updated = sessions.map(
+          (s) => onceEvent(s.client, "game_updated") as Promise<PublicGameState>
+        );
+        // Cualquier jugador (no solo el anfitrión) puede iniciar la siguiente ronda.
+        anyRoundOver.client.emit("start_next_round");
+        const fresh = await Promise.all(updated);
+        assert(
+          fresh.every((s) => s.status === "playing"),
+          "start_next_round inicia la siguiente ronda en playing"
+        );
+        assert(
+          fresh.every((s) => s.roundNumber === roundBefore + 1),
+          `la ronda número ${roundBefore + 1} comienza`
+        );
+        assert(
+          fresh.every(
+            (s) =>
+              s.teamScores[0] === scoresBefore[0] &&
+              s.teamScores[1] === scoresBefore[1]
+          ),
+          "el marcador acumulado persiste entre rondas"
+        );
+        assert(
+          fresh.every((s) => s.yourHand.length === 7),
+          "cada jugador recibe 7 fichas nuevas en la siguiente ronda"
+        );
+        roundsCompleted++;
+        await wait(150);
+        continue;
+      }
 
       const mover = sessions.find(
         (s) => s.state?.currentPlayer === s.playerId
@@ -278,7 +315,7 @@ async function main(): Promise<void> {
             "player_passed notifica quién pasó"
           );
         } else {
-          assert(true, "un pase que provoca bloqueo termina la partida");
+          assert(true, "un pase que provoca bloqueo termina la ronda");
         }
         await wait(120);
       }
@@ -286,16 +323,30 @@ async function main(): Promise<void> {
     }
 
     const final = sessions.find((s) => s.state?.status === "finished");
-    assert(final !== undefined, "la partida llega a finished");
-    assert(
-      final!.state!.winnerId !== null,
-      "se determina un ganador (o jugador con menos puntos en bloqueo)"
-    );
-    assert(
-      final!.state!.winnerReason === "empty-hand" ||
-        final!.state!.winnerReason === "blocked",
-      `motivo de finalización válido (${final!.state!.winnerReason})`
-    );
+    if (final) {
+      assert(final.state!.winnerId !== null, "se determina un ganador");
+      assert(
+        final.state!.winnerReason === "empty-hand" ||
+          final.state!.winnerReason === "blocked",
+        `motivo de finalización válido (${final.state!.winnerReason})`
+      );
+      assert(
+        final.state!.matchWinnerTeam !== null,
+        "al terminar el match por puntos se determina el equipo campeón"
+      );
+    } else {
+      assert(
+        sessions.some(
+          (s) =>
+            s.state?.status === "round-over" || s.state?.status === "playing"
+        ),
+        "sin match terminado, la partida quedó en round-over o sigue jugando"
+      );
+      assert(
+        roundsCompleted === maxRounds,
+        `se completaron ${maxRounds} rondas sin alcanzar el objetivo`
+      );
+    }
     assert(moves > 0, `se jugaron ${moves} movimientos válidos`);
 
     const boardsTiles = sessions[0].state!.board.map((t) => t.id).join(",");

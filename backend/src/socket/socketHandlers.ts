@@ -43,7 +43,20 @@ function emitGameFinished(io: Server, room: Room): void {
     winnerId: room.game?.state.winnerId ?? null,
     winnerTeam: room.game?.state.winnerTeam ?? null,
     winnerReason: room.game?.state.winnerReason ?? null,
+    matchWinnerTeam: room.game?.state.matchWinnerTeam ?? null,
   });
+}
+
+// Después de terminar una ronda: si el match llegó a su fin (puntos objetivo
+// alcanzados o partida abandonada) se emite game_finished; si solo terminó la
+// ronda, se sincroniza el estado round-over para que el frontend ofrezca
+// "Siguiente ronda".
+function afterRoundEnd(io: Server, room: Room): void {
+  if (room.game?.state.status === "finished") {
+    emitGameFinished(io, room);
+  } else {
+    broadcastGameState(io, room);
+  }
 }
 
 export function registerSocketHandlers(io: Server, roomManager: RoomManager): void {
@@ -202,16 +215,11 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager): vo
 
       if (room.game.hasWinner()) {
         room.game.finishWithWinner();
-        emitGameFinished(io, room);
+        afterRoundEnd(io, room);
         return;
       }
 
       room.game.advanceTurn();
-      if (room.game.state.status === "finished") {
-        emitGameFinished(io, room);
-        return;
-      }
-
       broadcastGameState(io, room);
     });
 
@@ -247,11 +255,31 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager): vo
 
       if (!game.canAnyonePlay()) {
         game.finishBlocked();
-        emitGameFinished(io, room);
+        afterRoundEnd(io, room);
         return;
       }
 
       game.advanceTurn();
+      broadcastGameState(io, room);
+    });
+
+    socket.on("start_next_round", () => {
+      const roomId = session.roomId;
+      const playerId = session.playerId;
+      if (!roomId || !playerId) return;
+
+      const room = roomManager.getRoom(roomId);
+      if (!room || !room.game) return;
+
+      if (room.game.state.status !== "round-over") {
+        socket.emit("invalid_move", {
+          message: "La partida no está en estado de ronda terminada.",
+        });
+        return;
+      }
+
+      // Cualquier jugador puede iniciar la siguiente ronda.
+      room.game.startNextRound();
       broadcastGameState(io, room);
     });
 

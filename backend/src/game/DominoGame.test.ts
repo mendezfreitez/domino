@@ -152,10 +152,11 @@ const win = g6.playTile("p0", "4-4");
 assert(win.valid === true, "primera ficha se juega con el tablero vacío");
 assert(g6.hasWinner() === true, "hay ganador con la mano vacía");
 g6.finishWithWinner();
-assert(g6.state.status === "finished", "la partida termina");
+assert(g6.state.status === "round-over", "sin alcanzar el objetivo, la ronda termina en round-over");
 assert(g6.state.winnerId === "p0", "el ganador es p0");
 assert(g6.state.winnerTeam === 0, "gana el equipo de p0 (equipo 0)");
 assert(g6.state.winnerReason === "empty-hand", "el motivo es mano vacía");
+assert(g6.state.matchWinnerTeam === null, "el match aún no tiene ganador");
 assert(g6.state.teamScores[0] === 10, "el equipo ganador suma los pips del rival (10)");
 assert(g6.state.teamScores[1] === 0, "el equipo perdedor queda en 0");
 
@@ -175,10 +176,11 @@ g7.advanceTurn();
 assert(g7.state.currentPlayer === "p3", "un jugador sin fichas no se salta: espera su PASO (sentido antihorario → p3)");
 assert(g7.canAnyonePlay() === false, "nadie puede jugar con el extremo [5]: hay bloqueo");
 g7.finishBlocked();
-assert(g7.state.status === "finished", "sin jugadas posibles la partida termina");
+assert(g7.state.status === "round-over", "sin jugadas posibles la ronda termina en round-over");
 assert(g7.state.winnerReason === "blocked", "el motivo es bloqueo");
 assert(g7.state.winnerTeam === 0, "gana el equipo con menos puntos (equipo 0: 10 vs 12)");
 assert(g7.state.winnerId === "p0", "el mejor jugador del equipo ganador es p0 (3 puntos)");
+assert(g7.state.matchWinnerTeam === null, "el match aún no tiene ganador");
 assert(g7.state.teamScores[0] === 12, "el equipo ganador suma los pips del rival (12)");
 assert(g7.state.teamScores[1] === 0, "el equipo perdedor queda en 0");
 
@@ -192,6 +194,109 @@ assert(pub.mustPass === false, "con el tablero vacío el primer jugador no debe 
 assert(pub.handCounts.p1 === 7, "el jugador ve la cantidad de fichas del rival");
 assert(pub.yourHand.every((t) => (g8.state.hands.p0 ?? []).some((x) => x.id === t.id)), "la mano propia coincide");
 assert("hands" in pub === false, "el estado público no expone la mano de los demás");
+
+console.log("");
+
+console.log("--- Ciclo de rondas ---");
+
+const r1 = new DominoGame("R1", makePlayers());
+r1.start();
+assert(r1.state.roundNumber === 1, "la primera ronda es la número 1");
+assert(
+  r1.state.currentStarterId === r1.state.currentPlayer,
+  "el starter de la primera ronda tiene el turno"
+);
+assert(r1.state.targetScore === 100, "el objetivo por defecto es 100 puntos");
+assert(r1.state.matchWinnerTeam === null, "no hay ganador de match al inicio");
+
+let guardThrew = false;
+try {
+  r1.startNextRound();
+} catch {
+  guardThrew = true;
+}
+assert(guardThrew, "startNextRound lanza error si la partida no está en round-over");
+
+const pub1 = r1.getPublicState("p0");
+assert(pub1.roundNumber === 1, "el estado público expone la ronda actual");
+assert(pub1.targetScore === 100, "el estado público expone el objetivo");
+assert(pub1.matchWinnerTeam === null, "el estado público expone el ganador del match");
+
+console.log("--- Transición round-over → siguiente ronda ---");
+
+const r2 = new DominoGame("R2", makePlayers());
+r2.start();
+r2.state.board = [];
+r2.state.currentPlayer = "p0";
+r2.state.hands = {
+  p0: [tile("4-4")],
+  p1: [tile("2-2")],
+  p2: [],
+  p3: [tile("3-3")],
+};
+const winR2 = r2.playTile("p0", "4-4");
+assert(winR2.valid === true, "la ficha ganadora se juega correctamente");
+r2.finishWithWinner();
+assert(r2.state.status === "round-over", "la ronda termina en round-over");
+assert(r2.state.currentPlayer === null, "no hay turno durante round-over");
+assert(r2.state.teamScores[0] === 10, "el marcador acumula los pips del rival");
+assert(
+  r2.getPublicState("p1").revealedHands.p0 !== undefined,
+  "las manos se revelan en round-over"
+);
+
+const firstStarter = r2.state.currentStarterId!;
+const firstStarterPos = r2.state.players.find((p) => p.id === firstStarter)!.position;
+r2.startNextRound();
+assert(r2.state.status === "playing", "la siguiente ronda inicia en playing");
+assert(r2.state.roundNumber === 2, "roundNumber incrementa a 2");
+const expectedStarter = r2.state.players[(firstStarterPos - 1 + 4) % 4].id;
+assert(
+  r2.state.currentPlayer === expectedStarter,
+  "el starter rota en sentido antihorario respecto a la ronda anterior"
+);
+assert(
+  r2.state.currentStarterId === expectedStarter,
+  "currentStarterId queda en el nuevo starter"
+);
+assert(r2.state.teamScores[0] === 10 && r2.state.teamScores[1] === 0, "el marcador persiste entre rondas");
+assert(r2.state.board.length === 0, "el tablero se reinicia");
+assert(r2.state.winnerId === null && r2.state.winnerReason === null, "los datos de ganador se limpian");
+for (const p of makePlayers()) {
+  assert((r2.state.hands[p.id] ?? []).length === 7, `${p.name} recibe 7 fichas en la ronda 2`);
+}
+
+console.log("--- Match terminado al alcanzar el objetivo ---");
+
+const r3 = new DominoGame("R3", makePlayers(), { targetScore: 10 });
+r3.start();
+r3.state.board = [];
+r3.state.currentPlayer = "p0";
+r3.state.hands = {
+  p0: [tile("4-4")],
+  p1: [tile("2-2")],
+  p2: [],
+  p3: [tile("3-3")],
+};
+r3.playTile("p0", "4-4");
+r3.finishWithWinner();
+assert(r3.state.status === "finished", "al alcanzar el objetivo el match termina");
+assert(r3.state.matchWinnerTeam === 0, "el equipo 0 gana el match");
+assert(r3.state.winnerReason === "empty-hand", "mantiene la razón de la última ronda");
+assert(
+  r3.getPublicState("p1").revealedHands.p0 !== undefined,
+  "las manos también se revelan al terminar el match"
+);
+
+console.log("--- Abandono durante la partida ---");
+
+const r4 = new DominoGame("R4", makePlayers());
+r4.start();
+r4.finishBecausePlayerLeft();
+assert(r4.state.status === "finished", "un jugador que se va termina la partida");
+assert(r4.state.winnerReason === "player-left", "la razón es player-left");
+assert(r4.state.matchWinnerTeam === null, "sin ganador de match cuando alguien se va");
+assert(r4.state.currentPlayer === null, "no queda turno activo");
 
 console.log("");
 if (failed > 0) {
