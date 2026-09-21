@@ -5,6 +5,7 @@ import { Player } from "../../components/Player/Player";
 import { PlayerHand } from "../../components/PlayerHand/PlayerHand";
 import { DominoTile } from "../../components/DominoTile/DominoTile";
 import { teamName, type Player as PlayerType } from "../../types/Player";
+import { sortHandTiles } from "../../types/Domino";
 import type { GameFinishedPayload, PublicGameState } from "../../types/Game";
 import "./Game.css";
 
@@ -216,7 +217,6 @@ export function Game({
   // desde cualquier asiento: quien te sigue (posición −1) se sienta a tu
   // derecha, luego el compañero arriba y el anterior a tu izquierda.
   const you = state.players.find((p) => p.id === youId);
-  const otherPlayers = state.players.filter((p) => p.id !== youId);
   const mod4 = (n: number) => ((n % 4) + 4) % 4;
   const seatAt = (offset: number) =>
     you === undefined
@@ -231,6 +231,26 @@ export function Game({
     (seat): seat is { className: string; player: PlayerType } =>
       seat.player !== undefined
   );
+
+  // Modal de revelado: la misma vista para todos los jugadores. Muestra una
+  // fila por equipo (0 y luego 1) únicamente con los jugadores que quedaron
+  // realmente con fichas en mano; dentro de cada mano las fichas se ordenan de
+  // menor a mayor (sortHandTiles). Quien se quedó sin fichas no aparece.
+  const revealTeams = useMemo(() => {
+    const groups = new Map<number, PlayerType[]>();
+    for (const player of state.players) {
+      const count = (state.revealedHands?.[player.id] ?? []).length;
+      if (count === 0) continue;
+      const list = groups.get(player.team);
+      if (list) list.push(player);
+      else groups.set(player.team, [player]);
+    }
+    const order = [...groups.keys()].sort((a, b) => a - b);
+    return order.map((team) => ({
+      team,
+      members: groups.get(team) ?? [],
+    }));
+  }, [state.players, state.revealedHands]);
 
   const finishedReason = result?.winnerReason ?? state.winnerReason;
   const isRoundOver = state.status === "round-over";
@@ -398,7 +418,7 @@ export function Game({
       {(isRoundOver || isFinished) && (
         <div className="reveal-overlay" role="dialog" aria-modal="true">
           <div className="reveal-modal">
-            <h2 className="reveal-title">Fichas de los demás jugadores</h2>
+            {/* <h2 className="reveal-title">Fichas restantes</h2> */}
             <p className="reveal-subtitle">
               {isRoundOver
                 ? `Así quedaron las manos al terminar la ronda ${state.roundNumber}.`
@@ -406,31 +426,33 @@ export function Game({
             </p>
 
             <ul className="reveal-list">
-              {otherPlayers.map((player) => {
-                const tiles = state.revealedHands?.[player.id] ?? [];
-                return (
-                  <li key={player.id} className={`reveal-item team-${player.team}`}>
-                    <span className="reveal-player team-name">
-                      {player.name}
-                    </span>
-                    {tiles.length === 0 ? (
-                      <span className="reveal-empty">sin fichas</span>
-                    ) : (
-                      <span className="reveal-tiles">
-                        {tiles.map((tile) => (
-                          <span className="reveal-tile" key={tile.id}>
-                            <DominoTile
-                              tile={tile}
-                              size="hand"
-                              orientation="vertical"
-                            />
-                          </span>
-                        ))}
-                      </span>
-                    )}
-                  </li>
-                );
-              })}
+              {revealTeams.map(({ team, members }) => (
+                <li key={team} className={`reveal-team team-${team}`}>
+                  <span className="reveal-team-name team-name">
+                    {teamName(team)}
+                  </span>
+                  <div className="reveal-team-players">
+                    {members.map((player) => (
+                      <div key={player.id} className="reveal-member">
+                        <span className="reveal-player">{player.name}</span>
+                        <span className="reveal-tiles">
+                          {sortHandTiles(
+                            state.revealedHands?.[player.id] ?? []
+                          ).map((tile) => (
+                            <span className="reveal-tile" key={tile.id}>
+                              <DominoTile
+                                tile={tile}
+                                size="hand"
+                                orientation="vertical"
+                              />
+                            </span>
+                          ))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </li>
+              ))}
             </ul>
 
             {isRoundOver ? (

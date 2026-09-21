@@ -371,21 +371,50 @@ body.domino-dragging {
   padding: 0;
   width: 100%;
   display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.9rem;
 }
 
-.reveal-item {
+.reveal-team {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  gap: 0.5rem;
-  padding: 10px;
+  gap: 0.1rem;
+  padding: 6px 8px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.reveal-team-name {
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.reveal-team.team-0 .reveal-team-name {
+  color: var(--accent);
+}
+
+.reveal-team.team-1 .reveal-team-name {
+  color: var(--turn);
+}
+
+.reveal-team-players {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.reveal-member {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .reveal-player {
@@ -410,12 +439,6 @@ body.domino-dragging {
 .reveal-tile .domino-tile {
   transform: scale(0.66);
   transform-origin: top left;
-}
-
-.reveal-empty {
-  color: var(--text-dim);
-  font-size: 0.9rem;
-  font-style: italic;
 }
 
 
