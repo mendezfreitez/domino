@@ -28,6 +28,7 @@ const BOARD_PAD_Y = 12;
 // la cabida, el contenedor permite desplazarse (scroll) sin mover fichas.
 const RESERVED_W_UNITS = 40;
 const RESERVED_H_UNITS = 28;
+const TILE_SCALE = 2.2;
 
 const EMPTY_LAYOUT: ChainLayout = {
   placements: [],
@@ -87,7 +88,7 @@ function toResolvedFrame(
   }
   const availW = Math.max(width - BOARD_PAD_X * 2, 1);
   const availH = Math.max(height - BOARD_PAD_Y * 2, 1);
-  const fit = Math.min(availW / RESERVED_W_UNITS, availH / RESERVED_H_UNITS);
+  const fit = Math.min(availW / RESERVED_W_UNITS, availH / RESERVED_H_UNITS) * TILE_SCALE;
   return {
     tileH: Math.min(Math.max(fit, MIN_TILE_H), MAX_TILE_H),
     originX,
