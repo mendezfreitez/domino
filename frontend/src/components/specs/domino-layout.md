@@ -63,34 +63,34 @@ Para una ficha doble:
 
 # 3. Concepto de línea principal
 
-La partida comienza formando una **línea principal horizontal**.
+La partida comienza formando una **línea principal horizontal** a partir de la **primera pieza** (el ancla).
 
-La línea principal debe tener como mínimo:
+La norma de cruce se cuenta **por lado, desde la primera pieza** (el ancla no cuenta):
 
 ```text
-16 fichas
+6 fichas contadas en cada lado
 ```
 
-Antes de alcanzar las 16 fichas, no se deben realizar cruces.
+Cada lado crece horizontal hasta tener sus 6 fichas contadas; a partir de ahí puede cruzar.
 
 La línea debe crecer inicialmente de forma horizontal.
 
-Ejemplo conceptual:
+Ejemplo conceptual (6 a la izquierda + ancla + 6 a la derecha):
 
 ```text
-[ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
+[ ][ ][ ][ ][ ][ ][A][ ][ ][ ][ ][ ][ ]
 ```
 
 ---
 
-# 4. Longitud mínima de la línea principal
+# 4. Fichas contadas por lado antes del cruce
 
-La línea principal debe contener **como mínimo 16 fichas antes de realizar cualquier cruce**.
+Cada lado de la línea principal debe tener **6 fichas contadas desde la primera pieza (el ancla no cuenta) antes de poder cruzar** en ese lado.
 
 Por lo tanto:
 
 ```text
-cantidad < 16
+fichas contadas en el lado < 6
     ↓
 continuar línea recta
 ```
@@ -98,28 +98,33 @@ continuar línea recta
 Cuando:
 
 ```text
-cantidad >= 16
+fichas contadas en el lado >= 6
 ```
 
-se habilita la posibilidad de realizar un cruce.
+se habilita la posibilidad de realizar un cruce en ese lado.
 
-El cruce no debe producirse antes de que existan 16 fichas en la línea principal.
+El cruce no debe producirse antes de que un lado tenga sus 6 fichas contadas desde la primera pieza.
 
 ---
 
 # 5. Cruces de 90 grados
 
-Una vez alcanzadas las 16 fichas, la cadena debe poder continuar mediante un giro de **90 grados**.
+Cuando un lado tiene **6 fichas contadas desde la primera pieza (el ancla no cuenta)**, la **7ª ficha** que se coloque en ese lado intenta cruzar **90 grados**:
 
-El giro debe producirse en ambos extremos de la línea principal.
+* lado **derecho** → cruce hacia **arriba**,
+* lado **izquierdo** → cruce hacia **abajo**.
+
+Con estas reglas, ambos extremos de la línea principal pueden cruzar.
 
 Conceptualmente:
 
 ```text
-                [ ][ ][ ]
-                       |
-                       |
-[ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
+                 [ ][ ][ ]
+                        |
+                        |
+[ ][ ][ ][ ][ ][A][ ][ ][ ][ ][ ][ ]
+                        |
+                 [ ][ ][ ]
 ```
 
 Sin embargo, ambos extremos deben utilizar direcciones opuestas.
@@ -133,7 +138,7 @@ Es decir, la ficha que gira debe cumplir ambas condiciones:
 * no ser una ficha doble, y
 * estar conectada a una ficha anterior que tampoco sea doble.
 
-Si al alcanzar el umbral el giro correspondiera a:
+Si cuando toca cruzar (6 fichas contadas en el lado), el giro correspondiera a:
 
 * una ficha **doble**, o
 * una ficha **inmediatamente pegada a una doble** (su ficha anterior en la cadena es doble),
@@ -589,13 +594,13 @@ rightEnd
 
 # 22. Cambio de dirección
 
-Antes de alcanzar las 16 fichas:
+Mientras un lado no tenga sus 6 fichas contadas desde la primera pieza:
 
 ```text
 LEFT  ←────────────→ RIGHT
 ```
 
-Después de alcanzar las 16 fichas:
+Cuando un lado tiene 6 fichas contadas, su 7ª ficha cruza (derecha → arriba, izquierda → abajo):
 
 ```text
 LEFT  └────────────┘ RIGHT
@@ -924,33 +929,23 @@ Debe respetar primero las reglas del dominó.
 
 # 33. Ejemplo conceptual completo
 
-Supongamos que la línea alcanza 16 fichas:
+Supongamos que el ancla (`A`) ya tiene 6 fichas contadas a cada lado (1-6 a la derecha, 1'-6' a la izquierda):
 
 ```text
-[1][2][3][4][5][6][7][8][9][10][11][12][13][14][15][16]
+[1'][2'][3'][4'][5'][6'][A][1][2][3][4][5][6]
 ```
 
-A partir de ese momento:
+A partir de ese momento, la **7ª ficha** de cada lado cruza en direcciones opuestas:
 
 ```text
-                 [17]
-                 [18]
-                 [19]
-                   |
-[1][2][3]...[15][16]
+              [7']
+                |
+[1'][2'][3'][4'][5'][6'][A][1][2][3][4][5][6]
+                |
+              [7]
 ```
 
-Mientras el extremo contrario:
-
-```text
-                   |
-[1][2][3]...[15][16]
-                   |
-                  [X]
-                  [X]
-```
-
-debe crecer en la dirección vertical opuesta.
+El lado **derecho** crece hacia **arriba** y el lado **izquierdo** hacia **abajo**.
 
 La representación exacta dependerá del sistema de coordenadas, pero la regla fundamental es:
 
@@ -1065,7 +1060,7 @@ Todo eso debe ser responsabilidad del sistema de ordenamiento.
 La implementación será considerada correcta cuando:
 
 * [ ] Existan exactamente 28 fichas únicas.
-* [ ] La línea principal tenga al menos 16 fichas antes del primer cruce.
+* [ ] Cada lado tenga 6 fichas contadas desde la primera pieza (el ancla no cuenta) antes de su cruce.
 * [ ] La línea inicial sea horizontal.
 * [ ] Las fichas se conecten correctamente.
 * [ ] Los extremos puedan continuar la cadena.
@@ -1096,7 +1091,7 @@ La cadena debe construirse de forma **incremental**:
 
 El renderizado debe usar un **marco fijo por ronda**:
 
-* La **escala** (`tileH`) y el **origen** de render se calculan **una sola vez por ronda** a partir del tamaño del contenedor y de una cabida reservada típica del serpentín (una partida completa de 28 fichas suele ocupar ~40 unidades de ancho × ~26 de alto; el ancho puede crecer algo más si el giro se pospone por dobles).
+* La **escala** (`tileH`) y el **origen** de render se calculan **una sola vez por ronda** a partir del tamaño del contenedor y de una cabida reservada típica del serpentín (con la norma de cruce por lado —6 contadas desde la primera pieza—, una partida completa de 28 fichas suele ocupar ~29 unidades de ancho × ~18 de alto, aunque un tramo vertical muy cargado puede acercarse a ±14 y recurrir al scroll).
 * **Nunca** se recalculan al crecer la cadena (solo al redimensionar la ventana o al iniciar una ronda nueva).
 * En consecuencia, la **posición en píxeles** de cada ficha ya dibujada no cambia durante toda la ronda.
 

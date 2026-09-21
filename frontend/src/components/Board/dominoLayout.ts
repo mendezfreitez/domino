@@ -27,10 +27,12 @@ export interface ChainEnd {
   turnDirection: TurnDirection;
   connectionSide: ConnectionSide;
   lastPlacementIndex: number;
+  /** Fichas colocadas en este lado desde la primera pieza (el ancla no cuenta). */
+  countFromAnchor: number;
 }
 
 export interface BoardConfig {
-  mainLineLength: number;
+  turnLimitPerSide: number;
   tileGap: number;
   rightTurnDirection: TurnDirection;
   leftTurnDirection: TurnDirection;
@@ -53,7 +55,7 @@ export interface ChainBuilder {
 }
 
 export const DEFAULT_CONFIG: BoardConfig = {
-  mainLineLength: 16,
+  turnLimitPerSide: 6,
   tileGap: 0.02,
   rightTurnDirection: "UP",
   leftTurnDirection: "DOWN",
@@ -101,12 +103,17 @@ export function getTurnDirection(side: Side, config: BoardConfig): TurnDirection
   return side === "right" ? config.rightTurnDirection : config.leftTurnDirection;
 }
 
+// La norma de cruce se cuenta por lado, desde la primera pieza (el ancla no
+// cuenta): cuando un lado tiene `turnLimitPerSide` fichas contadas, la
+// siguiente ficha que se coloque en ese lado intenta girar (derecha → arriba,
+// izquierda → abajo). El giro se evalúa con el conteo previo a la colocación,
+// de modo que la 7ª ficha del lado (con 6 ya contadas) es la que cruza.
 export function shouldTurn(
-  totalPlaced: number,
+  countFromAnchor: number,
   end: ChainEnd,
   config: BoardConfig
 ): boolean {
-  return !end.hasTurned && totalPlaced >= config.mainLineLength;
+  return !end.hasTurned && countFromAnchor >= config.turnLimitPerSide;
 }
 
 export function checkCollision(
@@ -154,7 +161,7 @@ interface GeometryInput {
 function computeGeometry(
   input: GeometryInput,
   end: ChainEnd,
-  totalPlaced: number,
+  countFromAnchor: number,
   config: BoardConfig,
   prev: PositionedTile | null
 ): Geometry {
@@ -165,7 +172,7 @@ function computeGeometry(
   // cruce se pospone hasta que aparezca una ficha válida (hasTurned sigue en
   // false y los siguientes tramos vuelven a intentarlo).
   const wantTurn =
-    shouldTurn(totalPlaced, end, config) &&
+    shouldTurn(countFromAnchor, end, config) &&
     !input.isDoubleTile &&
     !prevIsDouble;
 
@@ -278,13 +285,13 @@ export function placeTile(
     prevIdx >= 0 && prevIdx < builder.placements.length
       ? builder.placements[prevIdx]
       : null;
-  const totalPlaced = builder.placements.length;
+  const sideCount = end.countFromAnchor;
   const connValue = end.connectionValue;
   const freeValue = tile.left === connValue ? tile.right : tile.left;
   const g = computeGeometry(
     { tile, isDoubleTile: isDouble(tile), connValue, freeValue },
     end,
-    totalPlaced,
+    sideCount,
     config,
     prev
   );
@@ -320,6 +327,7 @@ export function placeTile(
   end.y = g.nextY + (y - g.y);
   end.lastPlacementIndex = builder.placements.length;
   builder.placements.push(placed);
+  end.countFromAnchor = sideCount + 1;
   return placed;
 }
 
@@ -335,7 +343,6 @@ export function predictNextPlacement(
     prevIdx >= 0 && prevIdx < layout.placements.length
       ? layout.placements[prevIdx]
       : null;
-  const totalPlaced = layout.placements.length;
   const dummy: DominoTile = {
     id: "__drop",
     left: end.connectionValue,
@@ -349,7 +356,7 @@ export function predictNextPlacement(
       freeValue: end.connectionValue,
     },
     end,
-    totalPlaced,
+    end.countFromAnchor,
     config,
     prev
   );
@@ -407,6 +414,7 @@ export function createChain(
       turnDirection: config.leftTurnDirection,
       connectionSide: "RIGHT",
       lastPlacementIndex: -1,
+      countFromAnchor: 0,
     },
     rightEnd: {
       x: anchorHalf,
@@ -417,6 +425,7 @@ export function createChain(
       turnDirection: config.rightTurnDirection,
       connectionSide: "LEFT",
       lastPlacementIndex: -1,
+      countFromAnchor: 0,
     },
   };
 
