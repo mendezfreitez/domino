@@ -73,7 +73,7 @@
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  font-size: 0.85rem;
+  font-size: 1.1rem;
 }
 
 .game-score-dot {
@@ -120,6 +120,9 @@
 .game-turn-status {
   color: var(--turn);
   font-weight: 700;
+  font-size: 2.5rem;
+  align-self: baseline;
+  padding-top: 0.6rem;
 }
 
 .game-leave {
