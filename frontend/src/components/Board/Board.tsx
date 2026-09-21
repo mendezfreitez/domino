@@ -36,7 +36,7 @@ const BOARD_PAD_Y = 12;
 // fichas.
 const RESERVED_W_UNITS = 40;
 const RESERVED_H_UNITS = 28;
-const TILE_SCALE = 2.2;
+const TILE_SCALE = 2.6;
 
 const EMPTY_LAYOUT: ChainLayout = {
   placements: [],
