@@ -276,21 +276,21 @@ export function Game({
             </span>
             <div className="game-score team-0">
               <span className="game-score-dot team-0" aria-hidden="true" />
-              <span className="game-score-name">{teamName(0)}</span>
+              <span className="game-score-name">{teamName(state.players, 0)}</span>
               <span className="game-score-points">
                 {(state.teamScores?.[0] ?? 0)} pts
               </span>
             </div>
             <div className="game-score team-1">
               <span className="game-score-dot team-1" aria-hidden="true" />
-              <span className="game-score-name">{teamName(1)}</span>
+              <span className="game-score-name">{teamName(state.players, 1)}</span>
               <span className="game-score-points">
                 {(state.teamScores?.[1] ?? 0)} pts
               </span>
             </div>
-            <span className="game-scoreboard-label">
+            {/* <span className="game-scoreboard-label">
               Objetivo: {state.targetScore ?? 100} pts
-            </span>
+            </span> */}
           </div>
         </div>
         <span className="game-turn-status">
