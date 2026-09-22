@@ -209,7 +209,6 @@ export function Game({
   const currentPlayer = state.players.find((p) => p.id === state.currentPlayer);
   const winner = state.players.find((p) => p.id === (result?.winnerId ?? state.winnerId));
   const winnerTeam = result?.winnerTeam ?? state.winnerTeam;
-  const winnerTeamLabel = winnerTeam !== null ? teamName(winnerTeam) : null;
 
   // Asientos relativos a cada jugador: tú estás abajo (tu propia mano),
   // tu compañero arriba y los dos rivales a los costados. La mesa es una
@@ -363,35 +362,25 @@ export function Game({
             <p className="reveal-subtitle">
               {finishedReason === "player-left" ? (
                 <>Un jugador abandonó la partida. Juego terminado.</>
-              ) : state.matchWinnerTeam !== null ? (
-                <>
-                  Gana el equipo{" "}
-                  <strong>{teamName(state.matchWinnerTeam)}</strong> con{" "}
-                  {state.teamScores?.[state.matchWinnerTeam] ?? 0} pts
-                  {finishedReason === "empty-hand" && winner ? (
-                    <>: <strong>{winner.name}</strong> se quedó sin fichas.</>
-                  ) : blocker ? (
-                    <>: <strong>{blocker.name}</strong> trancó la partida.</>
-                  ) : null}
-                </>
               ) : finishedReason === "blocked" ? (
                 <>
-                  <strong>{blocker?.name ?? "…"}</strong> trancó la ronda —
-                  gana el equipo{" "}
-                  <strong>{winnerTeamLabel ?? "…"}</strong> por tener menos
-                  puntos.
+                  Ganan{" "}
+                  <strong>{teamName(state.players, winnerTeam ?? -1)}</strong>,{" "}
+                  <strong>{blocker?.name ?? "…"}</strong> trancó la{" "}
+                  {isFinished ? "partida" : "ronda"} (
+                  {state.teamScores?.[winnerTeam ?? 0] ?? 0} pts vs{" "}
+                  {state.teamScores?.[1 - (winnerTeam ?? 0)] ?? 0} pts).
                 </>
               ) : (
-                <>
-                  ¡Gana el equipo <strong>{winnerTeamLabel ?? "…"}</strong>!
-                  {winner && (
-                    <> <strong>{winner.name}</strong> se quedó sin fichas.</>
-                  )}
-                </>
+                <div style={{fontSize: '22px'}}>
+                  Ganan{" "}
+                  <strong>{teamName(state.players, winnerTeam ?? -1)}</strong>...{" "}
+                  <strong>{winner?.name.toUpperCase() ?? "…"}</strong> se quedó sin fichas.
+                </div>
               )}
             </p>
-            <button className="primary" onClick={() => setShowResult(false)}>
-              Mostrar fichas
+            <button className="primary" onClick={() => setShowResult(false)} style={{marginTop: "12px", marginBottom: "4px"}}>
+              Mostrar fichas restantes
             </button>
           </div>
         </div>
