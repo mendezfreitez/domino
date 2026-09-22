@@ -25,6 +25,7 @@ export interface GameState {
   winnerId: string | null;
   winnerTeam: number | null;
   winnerReason: WinnerReason | null;
+  blockedById: string | null;
   teamScores: [number, number];
   roundNumber: number;
   currentStarterId: string | null;
@@ -41,6 +42,7 @@ export interface PublicGameState {
   winnerId: string | null;
   winnerTeam: number | null;
   winnerReason: WinnerReason | null;
+  blockedById: string | null;
   yourPlayerId: string;
   yourHand: DominoTile[];
   handCounts: Record<string, number>;

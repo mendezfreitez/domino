@@ -34,6 +34,7 @@ export class DominoGame {
       winnerId: null,
       winnerTeam: null,
       winnerReason: null,
+      blockedById: null,
       teamScores: [0, 0],
       roundNumber: 0,
       currentStarterId: null,
@@ -117,6 +118,7 @@ export class DominoGame {
     this.state.winnerId = null;
     this.state.winnerTeam = null;
     this.state.winnerReason = null;
+    this.state.blockedById = null;
     this.state.currentPlayer = this.state.currentStarterId;
     this.state.status = "playing";
   }
@@ -223,6 +225,7 @@ export class DominoGame {
   }
 
   finishBlocked(): void {
+    this.state.blockedById = this.state.currentPlayer;
     const winnerTeam = this.blockingWinnerTeam();
     this.finishRound(winnerTeam, this.bestPlayerInTeam(winnerTeam), "blocked");
   }
@@ -267,6 +270,7 @@ export class DominoGame {
     this.state.winnerId = null;
     this.state.winnerTeam = null;
     this.state.winnerReason = "player-left";
+    this.state.blockedById = null;
     this.state.matchWinnerTeam = null;
     this.state.currentPlayer = null;
     this.state.status = "finished";
@@ -298,6 +302,7 @@ export class DominoGame {
       winnerId: this.state.winnerId,
       winnerTeam: this.state.winnerTeam,
       winnerReason: this.state.winnerReason,
+      blockedById: this.state.blockedById,
       yourPlayerId: playerId,
       yourHand: this.state.hands[playerId] ?? [],
       handCounts,

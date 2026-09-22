@@ -204,20 +204,6 @@
   overflow: auto;
 }
 
-.game-result {
-  background: rgba(255, 209, 102, 0.12);
-  border: 1px solid var(--turn);
-  color: var(--text);
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
-  text-align: center;
-  font-size: 1.05rem;
-}
-
-.game-result strong {
-  color: var(--turn);
-}
-
 .game-error {
   text-align: center;
 }

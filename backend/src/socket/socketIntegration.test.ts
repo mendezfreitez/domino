@@ -330,6 +330,18 @@ async function main(): Promise<void> {
           final.state!.winnerReason === "blocked",
         `motivo de finalización válido (${final.state!.winnerReason})`
       );
+      if (final.state!.winnerReason === "blocked") {
+        assert(
+          final.state!.blockedById !== null &&
+            final.state!.players.some((p) => p.id === final.state!.blockedById),
+          "al bloquearse se identifica a un jugador como trancador"
+        );
+      } else {
+        assert(
+          final.state!.blockedById === null,
+          "sin bloqueo no hay trancador"
+        );
+      }
       assert(
         final.state!.matchWinnerTeam !== null,
         "al terminar el match por puntos se determina el equipo campeón"

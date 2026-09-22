@@ -43,6 +43,7 @@ function emitGameFinished(io: Server, room: Room): void {
     winnerId: room.game?.state.winnerId ?? null,
     winnerTeam: room.game?.state.winnerTeam ?? null,
     winnerReason: room.game?.state.winnerReason ?? null,
+    blockedById: room.game?.state.blockedById ?? null,
     matchWinnerTeam: room.game?.state.matchWinnerTeam ?? null,
   });
 }

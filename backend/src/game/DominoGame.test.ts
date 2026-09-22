@@ -156,6 +156,7 @@ assert(g6.state.status === "round-over", "sin alcanzar el objetivo, la ronda ter
 assert(g6.state.winnerId === "p0", "el ganador es p0");
 assert(g6.state.winnerTeam === 0, "gana el equipo de p0 (equipo 0)");
 assert(g6.state.winnerReason === "empty-hand", "el motivo es mano vacía");
+assert(g6.state.blockedById === null, "sin bloqueo no hay trancador");
 assert(g6.state.matchWinnerTeam === null, "el match aún no tiene ganador");
 assert(g6.state.teamScores[0] === 10, "el equipo ganador suma los pips del rival (10)");
 assert(g6.state.teamScores[1] === 0, "el equipo perdedor queda en 0");
@@ -178,11 +179,14 @@ assert(g7.canAnyonePlay() === false, "nadie puede jugar con el extremo [5]: hay 
 g7.finishBlocked();
 assert(g7.state.status === "round-over", "sin jugadas posibles la ronda termina en round-over");
 assert(g7.state.winnerReason === "blocked", "el motivo es bloqueo");
+assert(g7.state.blockedById === "p3", "el trancador es p3 (el que esperaba su PASO)");
 assert(g7.state.winnerTeam === 0, "gana el equipo con menos puntos (equipo 0: 10 vs 12)");
 assert(g7.state.winnerId === "p0", "el mejor jugador del equipo ganador es p0 (3 puntos)");
 assert(g7.state.matchWinnerTeam === null, "el match aún no tiene ganador");
 assert(g7.state.teamScores[0] === 12, "el equipo ganador suma los pips del rival (12)");
 assert(g7.state.teamScores[1] === 0, "el equipo perdedor queda en 0");
+g7.startNextRound();
+assert(g7.state.blockedById === null, "el trancador se limpia al iniciar la siguiente ronda");
 
 console.log("--- Estado público (privacidad de fichas) ---");
 
