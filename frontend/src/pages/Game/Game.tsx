@@ -386,52 +386,6 @@ export function Game({
         </div>
       )}
 
-      {error && <div className="error-banner game-error">{error}</div>}
-
-      <section className="game-hand-area">
-<PlayerHand
-          tiles={state.yourHand}
-          isYourTurn={isYourTurn}
-          playableIds={playableIds}
-          onTileMouseDown={handleTileMouseDown}
-        />
-        {mustPass && (
-          <div className="game-pass-area">
-            <p>No tienes fichas que puedas colocar en el tablero.</p>
-            <button className="primary" onClick={onPass}>
-              PASO
-            </button>
-          </div>
-        )}
-      </section>
-        </div>
-      </div>
-
-      {lastPass && (
-        <div className="pass-modal-overlay">
-          <div className="pass-modal">
-            <p>
-              Jugador <strong>{lastPass.name}</strong> ha pasado
-            </p>
-          </div>
-        </div>
-      )}
-
-      {showInvalidDrop && (
-        <div className="pass-modal-overlay">
-          <div className="pass-modal">
-            <p>Esa ficha no va en ese lado del tablero.</p>
-            <button
-              className="primary"
-              style={{ padding: "6px 18px" }}
-              onClick={() => setShowInvalidDrop(false)}
-            >
-              Entendido
-            </button>
-          </div>
-        </div>
-      )}
-
       {(isRoundOver || isFinished) && !showResult && (
         <div className="reveal-overlay" role="dialog" aria-modal="true">
           <div className="reveal-modal">
@@ -485,6 +439,51 @@ export function Game({
         </div>
       )}
 
+      {error && <div className="error-banner game-error">{error}</div>}
+
+      <section className="game-hand-area">
+<PlayerHand
+          tiles={state.yourHand}
+          isYourTurn={isYourTurn}
+          playableIds={playableIds}
+          onTileMouseDown={handleTileMouseDown}
+        />
+        {mustPass && (
+          <div className="game-pass-area">
+            <p>No tienes fichas que puedas colocar en el tablero.</p>
+            <button className="primary" onClick={onPass}>
+              PASO
+            </button>
+          </div>
+        )}
+      </section>
+        </div>
+      </div>
+
+      {lastPass && (
+        <div className="pass-modal-overlay">
+          <div className="pass-modal">
+            <p>
+              Jugador <strong>{lastPass.name}</strong> ha pasado
+            </p>
+          </div>
+        </div>
+      )}
+
+      {showInvalidDrop && (
+        <div className="pass-modal-overlay">
+          <div className="pass-modal">
+            <p>Esa ficha no va en ese lado del tablero.</p>
+            <button
+              className="primary"
+              style={{ padding: "6px 18px" }}
+              onClick={() => setShowInvalidDrop(false)}
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
 
       {dragTileId && dragTile && dragGhost && (
         <div
