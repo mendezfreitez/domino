@@ -131,19 +131,17 @@ Sin embargo, ambos extremos deben utilizar direcciones opuestas.
 
 ## 5.1 Restricción de fichas dobles en el giro
 
-El giro de 90° solo puede ejecutarse sobre una ficha **no doble** conectada a otra **no doble**.
+El giro de 90° se ejecuta sobre una ficha **no doble**.
 
-Es decir, la ficha que gira debe cumplir ambas condiciones:
-
-* no ser una ficha doble, y
-* estar conectada a una ficha anterior que tampoco sea doble.
+Es decir, la ficha que gira debe ser no doble.
 
 Si cuando toca cruzar (6 fichas contadas en el lado), el giro correspondiera a:
 
-* una ficha **doble**, o
-* una ficha **inmediatamente pegada a una doble** (su ficha anterior en la cadena es doble),
+* una ficha **doble**,
 
-entonces **no se gira**: esa ficha se coloca recta y el cruce queda **pospuesto** hasta que aparezca una ficha no doble que esté conectada a otra no doble.
+entonces **no se gira**: esa ficha se coloca recta y el cruce queda **pospuesto** hasta que aparezca una ficha no doble.
+
+En cambio, si la ficha que gira es **no doble pero está antecedida por una doble** (la doble en la línea horizontal se dibuja perpendicular, en forma de "T"), el cruce **sí se ejecuta**: la ficha se conecta **con el extremo libre de esa doble** (el extremo superior para `UP` y el inferior para `DOWN`), evitando así colisionar con la propia "T" y manteniendo el cruce de 90 grados.
 
 ## 5.2 Reorientación del tramo vertical (norma del segundo giro)
 
@@ -1140,7 +1138,7 @@ La implementación será considerada correcta cuando:
 * [ ] Las fichas se conecten correctamente.
 * [ ] Los extremos puedan continuar la cadena.
 * [ ] Los cruces sean de 90°.
-* [ ] El giro se posponga si toca en una ficha doble o en una ficha pegada a una doble.
+* [ ] El giro se posponga solo si toca en una ficha doble (la que debe girar). Si la ficha que gira es no doble antecedida por una doble, el cruce se ejecuta conectado al extremo libre de esa doble.
 * [ ] Tras el cruce, el tramo vertical cuente 2 fichas (incluido el cruce) y la siguiente (3ª del tramo) se reoriente en horizontal: derecha → izquierda, izquierda → derecha.
 * [ ] Si la 2ª ficha del tramo (la inmediata al cruce) es doble, ese lado retrase la reorientación y la ejecute la 4ª ficha del tramo.
 * [ ] La reorientación solo se ejecute sobre fichas no dobles; si toca en una doble, se posponga a la siguiente ficha del tramo.

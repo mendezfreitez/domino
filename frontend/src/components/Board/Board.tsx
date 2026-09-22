@@ -21,8 +21,9 @@ const BOARD_PAD_Y = 12;
 // Área reservada del serpentín, en "medias fichas" (una ficha horizontal mide 2
 // unidades de ancho). Norma de cruce: cada lado cuenta sus fichas desde la
 // primera pieza (el ancla no cuenta); con 6 contadas, la 7ª colocación de la
-// derecha gira hacia arriba y la 7ª de la izquierda hacia abajo (se mantiene
-// la postergación por dobles). Norma de reorientación: el tramo vertical cuenta
+// derecha gira hacia arriba y la 7ª de la izquierda hacia abajo (la ficha que
+// cruza debe ser no doble; si la anterior es doble, cruza conectada al extremo
+// libre de esa doble). Norma de reorientación: el tramo vertical cuenta
 // 2 fichas (cruce + 1 recta) y la 3ª vuelve a orientarse en horizontal (arriba
 // → izquierda, abajo → derecha), solo si no es doble; excepción: si la 2ª ficha
 // del tramo es doble, este lado cuenta una ficha más y la reorienta la 4ª. Así

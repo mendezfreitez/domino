@@ -179,18 +179,51 @@ function computeGeometry(
   prev: PositionedTile | null
 ): Geometry {
   const prevIsDouble = prev !== null && isDouble(prev.tile);
-  // El giro de 90° solo puede ejecutarse sobre una ficha NO doble conectada a
-  // otra NO doble. Si al alcanzar el umbral toca girar en una ficha doble o en
-  // una ficha inmediata a una doble, no se gira: la ficha se coloca recta y el
-  // cruce se pospone hasta que aparezca una ficha válida (hasTurned sigue en
-  // false y los siguientes tramos vuelven a intentarlo).
+  // El giro de 90° solo puede ejecutarse sobre una ficha NO doble: si al
+  // alcanzar el umbral toca girar en una ficha doble, esa ficha se coloca recta
+  // y el cruce se pospone hasta que aparezca una ficha no doble (hasTurned
+  // sigue en false y los siguientes tramos vuelven a intentarlo). Si la ficha
+  // anterior a la que cruza es doble (en cadena horizontal se dibuja
+  // perpendicular, en "T"), el cruce sí se ejecuta y la ficha se conecta con el
+  // extremo libre de esa doble (superior para UP, inferior para DOWN).
   const wantTurn =
-    shouldTurn(countFromAnchor, end, config) &&
-    !input.isDoubleTile &&
-    !prevIsDouble;
+    shouldTurn(countFromAnchor, end, config) && !input.isDoubleTile;
 
   if (wantTurn) {
     const direction = end.turnDirection;
+    if (prevIsDouble && prev) {
+      // Conexión al extremo libre de la doble (no al lateral): la doble, que en
+      // cadena horizontal se dibuja vertical (1×2), deja libre el extremo
+      // superior (UP) o inferior (DOWN) según la dirección del cruce.
+      if (direction === "UP") {
+        return {
+          x: prev.x,
+          y: prev.y - 2,
+          orientation: "vertical",
+          direction,
+          connectionSide: "BOTTOM",
+          nextX: prev.x,
+          nextY: prev.y - 3,
+          nextDirection: direction,
+          nextConnectionValue: input.freeValue,
+          turned: true,
+          reoriented: false,
+        };
+      }
+      return {
+        x: prev.x,
+        y: prev.y + 2,
+        orientation: "vertical",
+        direction,
+        connectionSide: "TOP",
+        nextX: prev.x,
+        nextY: prev.y + 3,
+        nextDirection: direction,
+        nextConnectionValue: input.freeValue,
+        turned: true,
+        reoriented: false,
+      };
+    }
     const o = end.direction === "RIGHT" ? 1 : -1;
     if (direction === "UP") {
       return {
