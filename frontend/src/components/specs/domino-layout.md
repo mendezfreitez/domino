@@ -1025,7 +1025,7 @@ Cuando cada tramo vertical cuenta **2 fichas hacia arriba/abajo (incluido el cru
 * El tramo derecho (arriba) reorienta las siguientes fichas hacia la **izquierda** (`7[8][9] → [10][11]`… hacia la izquierda).
 * El tramo izquierdo (abajo) reorienta las siguientes fichas hacia la **derecha**.
 
-Con esto la altura queda acotada a unas **±3.5 unidades** (en lugar de crecer hacia ±14), evitando el overflow vertical de `div.board`. El crecimiento se traslada al eje horizontal, que puede usar scroll si la cabida (40 × 28 unidades) se excede.
+Con esto la altura queda acotada a unas **±3.5 unidades** (en lugar de crecer hacia ±14), evitando el overflow vertical de `div.board`. El crecimiento se traslada al eje horizontal. El render usa un **marco fijo por ronda**: el origen queda fijo en el centro del contenedor y la escala (`tileH`) se calcula **una sola vez** (al iniciar la ronda o al redimensionar la ventana) para que una partida completa quepa en la **cabida reservada** de la mesa (medida con la norma actual: radio hasta ±22.3 unidades en X y ±11.1 en Y desde el ancla, más zonas y margen; se reservan **50×28 unidades**), con ajuste "aspect-fit". Mientras crece la cadena la escala y el origen **no cambian**: las fichas ya colocadas conservan su posición en píxeles y no se reposicionan en cada jugada. Si una partida extrema o una ventana muy pequeña exceden la cabida, el contenedor permite desplazarse (scroll como reserva).
 
 ---
 
@@ -1170,18 +1170,19 @@ La cadena debe construirse de forma **incremental**:
 
 El renderizado debe usar un **marco fijo por ronda**:
 
-* La **escala** (`tileH`) y el **origen** de render se calculan **una sola vez por ronda** a partir del tamaño del contenedor y de una cabida reservada típica del serpentín (con la norma de cruce por lado —6 contadas desde la primera pieza— y la reorientación del tramo vertical a las 2 fichas —incluido el cruce; 3 si la 2ª ficha del tramo es doble—, la altura queda acotada a ≈ ±3.5-4.5 unidades y el crecimiento se traslada al eje horizontal: una partida completa de 28 fichas suele ocupar ~28-40 unidades de ancho × ~7-9 de alto, sin necesitar desplazamiento vertical).
-* **Nunca** se recalculan al crecer la cadena (solo al redimensionar la ventana o al iniciar una ronda nueva).
-* En consecuencia, la **posición en píxeles** de cada ficha ya dibujada no cambia durante toda la ronda.
-
-Si la cadena crece más allá de la cabida reservada (partida extrema o ventana muy pequeña), el área del tablero permite **desplazarse** (scroll) para ver los extremos: la vista se mueve, no las fichas.
+* El **origen** de render es **fijo en el centro del contenedor** durante toda la ronda (el "ancla" visual del tablero).
+* La **escala** (`tileH`) se calcula **una sola vez por ronda** (al iniciar la ronda o al redimensionar la ventana), con ajuste "aspect-fit" sobre la **cabida reservada** de una partida completa (**50×28 unidades**, medida con la norma actual: radio hasta ±22.3 en X y ±11.1 en Y desde el ancla, más zonas de colocación y margen de render).
+* Mientras crece la cadena, la escala y el origen **no se recalculan**: las fichas ya colocadas **conservan exactamente su posición en píxeles** y no se reposicionan en cada jugada (solo las fichas nuevas se añaden en su posición definitiva).
+* El tablero **ocupa todo el alto y ancho posibles sin desbordar en partidas normales**: la cabida reservada cubre el peor caso medido del serpentín; si una partida extrema o una ventana diminuta la exceden, el scroll queda como reserva (no como solución principal), y los límites `MIN_TILE_H`/`MAX_TILE_H` acotan la escala.
 
 Criterios adicionales:
 
-* [ ] Las fichas ya colocadas no cambian de posición al redibujar el tablero.
+* [ ] Las fichas ya colocadas conservan sus coordenadas de rejilla **y su posición en píxeles** (la escala y el origen del marco no cambian al crecer la cadena).
 * [ ] El ancla de la cadena permanece fija durante toda la ronda.
-* [ ] La escala y el origen de render se fijan al inicio de la ronda y solo se recalculan al redimensionar la ventana.
+* [ ] El origen de render permanece fijo en el centro del contenedor durante toda la ronda.
+* [ ] La escala del marco se calcula al iniciar la ronda o al redimensionar la ventana, no al colocar fichas.
 * [ ] Las fichas nuevas se añaden únicamente a los extremos de la cadena.
+* [ ] En contenedores normales, una partida completa cabe sin desbordar (la cabida reservada cubre el peor caso medido del serpentín).
 
 ---
 

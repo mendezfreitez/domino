@@ -12,32 +12,38 @@ import {
 import type { ChainBuilder, ChainLayout, Side } from "./dominoLayout";
 import "./Board.css";
 
-const MIN_TILE_H = 16;
+const MIN_TILE_H = 42;
 const MAX_TILE_H = 108;
 const DEFAULT_TILE_H = 64;
 const BOARD_PAD_X = 16;
 const BOARD_PAD_Y = 12;
-
-// Área reservada del serpentín, en "medias fichas" (una ficha horizontal mide 2
-// unidades de ancho). Norma de cruce: cada lado cuenta sus fichas desde la
-// primera pieza (el ancla no cuenta); con 6 contadas, la 7ª colocación de la
-// derecha gira hacia arriba y la 7ª de la izquierda hacia abajo (la ficha que
-// cruza debe ser no doble; si la anterior es doble, cruza conectada al extremo
-// libre de esa doble). Norma de reorientación: el tramo vertical cuenta
-// 2 fichas (cruce + 1 recta) y la 3ª vuelve a orientarse en horizontal (arriba
-// → izquierda, abajo → derecha), solo si no es doble; excepción: si la 2ª ficha
-// del tramo es doble, este lado cuenta una ficha más y la reorienta la 4ª. Así
-// la altura queda acotada (~±3.5-4.5 unidades) y el crecimiento se traslada al
-// eje X: una partida completa de 28 fichas ocupa típicamente ~28-40 unidades de
-// ancho y casi nunca necesita desplazamiento vertical. El marco de render se
-// calcula una sola vez
-// por ronda a partir de esta cabida: las fichas nunca se recolocan ni cambian de
-// tamaño al crecer el tablero. Si una partida extrema o una ventana muy pequeña
-// exceden la cabida, el contenedor permite desplazarse (scroll) sin mover
-// fichas.
-const RESERVED_W_UNITS = 40;
+// Cabida reservada para una partida completa, en unidades de rejilla (una
+// ficha horizontal mide 2): radio máximo medido del serpentín desde el ancla
+// con la norma actual: ±22.24 en X y ±11.1 en Y; la cabida añade zonas de
+// colocación (±1) y margen de render (±1) por lado antes de redondear.
+const RESERVED_W_UNITS = 50;
 const RESERVED_H_UNITS = 28;
-const TILE_SCALE = 2.6;
+
+// Área del serpentín, en "unidades" (una ficha horizontal mide 2 unidades de
+// ancho). Norma de cruce: cada lado cuenta sus fichas desde la primera pieza
+// (el ancla no cuenta); con 6 contadas, la 7ª colocación de la derecha gira
+// hacia arriba y la 7ª de la izquierda hacia abajo (la ficha que cruza debe ser
+// no doble; si la anterior es doble, cruza conectada al extremo libre de esa
+// doble). Norma de reorientación: el tramo vertical cuenta 2 fichas (cruce + 1
+// recta) y la 3ª vuelve a orientarse en horizontal (arriba → izquierda, abajo
+// → derecha), solo si no es doble; excepción: si la 2ª ficha del tramo es
+// doble, este lado cuenta una ficha más y la reorienta la 4ª. Así la altura
+// queda acotada (~±3.5-4.5 unidades) y el crecimiento se traslada al eje
+// horizontal.
+//
+// El render usa un ORIGEN FIJO (el centro del contenedor) y una escala fija por
+// ronda: `tileH` se calcula UNA SOLA VEZ (al iniciar la ronda o al redimensionar
+// la ventana) para que una partida completa entre en la cabida reservada la
+// mesa (50×28 unidades) con ajuste "aspect-fit". Mientras crece la cadena, la
+// escala y el origen NO cambian: las fichas ya colocadas conservan su posición
+// en píxeles y no se reposicionan en cada jugada. Si una partida extrema o una
+// ventana diminuta exceden la cabida, el contenedor permite desplazarse (scroll
+// como reserva, no como solución principal).
 
 const EMPTY_LAYOUT: ChainLayout = {
   placements: [],
@@ -80,11 +86,15 @@ function dropHandlers(
   };
 }
 
-// El marco (escala `tileH` y origen) se fija una sola vez por ronda: se calcula
-// del tamaño del contenedor y de la cabida reservada del serpentín. Nunca
-// depende de los bounds actuales del tablero, por lo que las fichas ya
-// dibujadas conservan exactamente su posición en píxeles mientras crece la
-// cadena. Solo se recalcula al redimensionar la ventana o al reiniciar la ronda.
+// El marco (escala `tileH` y origen) se fija UNA SOLA VEZ por ronda y solo se
+// recalcula al redimensionar la ventana o al iniciar una ronda nueva. NUNCA se
+// recalcula al crecer el tablero: las fichas ya colocadas conservan su posición
+// en píxeles mientras crece la cadena (no se reposicionan en cada jugada).
+// `tileH` se calcula para que una partida completa (cabida máxima real del
+// serpentín, medida con la norma actual: radio hasta ±22.3 en X y ±11.1 en Y,
+// incluidas las zonas de colocación con margen) quepa en el área disponible del
+// contenedor (ajuste "aspect-fit"). El origen queda fijo en el centro del
+// contenedor: la tabla ocupa todo el alto y ancho posibles sin desbordar.
 function toResolvedFrame(
   width: number,
   height: number,
@@ -97,7 +107,7 @@ function toResolvedFrame(
   }
   const availW = Math.max(width - BOARD_PAD_X * 2, 1);
   const availH = Math.max(height - BOARD_PAD_Y * 2, 1);
-  const fit = Math.min(availW / RESERVED_W_UNITS, availH / RESERVED_H_UNITS) * TILE_SCALE;
+  const fit = Math.min(availW / RESERVED_W_UNITS, availH / RESERVED_H_UNITS);
   return {
     tileH: Math.min(Math.max(fit, MIN_TILE_H), MAX_TILE_H),
     originX,
@@ -197,9 +207,10 @@ export function Board({
     [layout]
   );
 
-  // Los bounds de fichas + zonas solo determinan el tamaño del lienzo y las
-  // celdas relativas a él. La posición en píxeles de cada pieza depende del
-  // marco fijo (origen + escala), no de estos bounds.
+  // Los bounds de fichas + zonas determinan el tamaño del lienzo y las celdas
+  // relativas a él. La escala del marco es FIJA por ronda (cabida reservada),
+  // así que estos bounds no afectan a la posición en píxeles de las fichas ya
+  // colocadas.
   const bounds = useMemo(() => {
     let minX = layout.minX;
     let maxX = layout.maxX;
@@ -215,9 +226,10 @@ export function Board({
     return { minX, maxX, minY, maxY };
   }, [layout, leftZone, rightZone]);
 
-  // Marco fijo: se calcula al inicio de la ronda y al redimensionar la ventana.
-  // NUNCA se recalcula al crecer el tablero (solo cambia `tiles.length`, que al
-  // pasar de 0 a 1 fija el marco para toda la ronda).
+  // Marco fijo por ronda: la escala se calcula UNA SOLA VEZ (al iniciar la
+  // ronda o al redimensionar la ventana) para que una partida completa quepa en
+  // la cabida reservada. Mientras crece la cadena NUNCA se recalcula: las
+  // fichas ya colocadas no se reposicionan ni se re-escalan en cada jugada.
   useLayoutEffect(() => {
     const el = boardRef.current;
     if (!el) return;
@@ -286,9 +298,10 @@ export function Board({
 
   const th = frame.tileH;
   // Posición relativa al lienzo. El lienzo se sitúa de modo que la posición en
-  // píxeles absoluta de cada pieza sea `origin + p * tileH`, que no cambia al
-  // crecer el tablero (los desplazamientos del lienzo se compensan con los de
-  // la celda).
+  // píxeles absoluta de cada pieza sea `origin + p * tileH`; como el marco es
+  // FIJO por ronda (escala y origen no cambian al crecer el tablero), las
+  // fichas ya colocadas conservan exactamente su posición en píxeles, y cada
+  // ficha nueva se añade en su posición definitiva.
   const toX = (u: number) => (u - bounds.minX + 1) * th;
   const toY = (u: number) => (u - bounds.minY + 1) * th;
   const layoutW = (bounds.maxX - bounds.minX + 2) * th;
