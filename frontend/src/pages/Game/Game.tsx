@@ -98,11 +98,11 @@ export function Game({
     const valid =
       side === "left"
         ? boardLeft === null ||
-          tile.left === boardLeft ||
-          tile.right === boardLeft
+        tile.left === boardLeft ||
+        tile.right === boardLeft
         : boardRight === null ||
-          tile.left === boardRight ||
-          tile.right === boardRight;
+        tile.left === boardRight ||
+        tile.right === boardRight;
     if (!valid) {
       setShowInvalidDrop(true);
       return;
@@ -150,11 +150,11 @@ export function Game({
           const valid =
             side === "left"
               ? current.boardLeft === null ||
-                tile.left === current.boardLeft ||
-                tile.right === current.boardLeft
+              tile.left === current.boardLeft ||
+              tile.right === current.boardLeft
               : current.boardRight === null ||
-                tile.left === current.boardRight ||
-                tile.right === current.boardRight;
+              tile.left === current.boardRight ||
+              tile.right === current.boardRight;
           if (valid) {
             current.onPlayTile(tileId, side);
           } else {
@@ -277,213 +277,222 @@ export function Game({
       >
         <div className="game">
           <header className="game-header">
-        <div className="game-header-left">
-          <div className="game-room">
+            <div className="game-header-left">
+              {/* <div className="game-room">
             <span className="game-room-label">Sala</span>
             <span className="game-room-code">{state.roomId}</span>
-          </div>
-          <div className="game-scoreboard" aria-label="Marcador de puntos">
-            <span className="game-scoreboard-label">
-              Marcador · Ronda {state.roundNumber || 1}
-            </span>
-            <div className="game-score team-0">
-              <span className="game-score-dot team-0" aria-hidden="true" />
-              <span className="game-score-name">{teamName(state.players, 0)}</span>
-              <span className="game-score-points">
-                {(state.teamScores?.[0] ?? 0)} pts
-              </span>
-            </div>
-            <div className="game-score team-1">
-              <span className="game-score-dot team-1" aria-hidden="true" />
-              <span className="game-score-name">{teamName(state.players, 1)}</span>
-              <span className="game-score-points">
-                {(state.teamScores?.[1] ?? 0)} pts
-              </span>
-            </div>
-            {/* <span className="game-scoreboard-label">
+          </div> */}
+              <div className="game-scoreboard" aria-label="Marcador de puntos">
+                <span className="game-scoreboard-label">
+                  Marcador · Ronda {state.roundNumber || 1}
+                </span>
+                <div className="game-score team-0">
+                  <span className="game-score-dot team-0" aria-hidden="true" />
+                  <span className="game-score-name">{teamName(state.players, 0)}</span>
+                  <span className="game-score-points">
+                    {(state.teamScores?.[0] ?? 0)} pts
+                  </span>
+                </div>
+                <div className="game-score team-1">
+                  <span className="game-score-dot team-1" aria-hidden="true" />
+                  <span className="game-score-name">{teamName(state.players, 1)}</span>
+                  <span className="game-score-points">
+                    {(state.teamScores?.[1] ?? 0)} pts
+                  </span>
+                </div>
+                {/* <span className="game-scoreboard-label">
               Objetivo: {state.targetScore ?? 100} pts
             </span> */}
-          </div>
-        </div>
-        <span className="game-turn-status">
-          {isFinished
-            ? state.matchWinnerTeam !== null
-              ? `Partida terminada — gana ${teamName(state.matchWinnerTeam)}`
-              : "Partida terminada"
-            : isRoundOver
-              ? `Ronda ${state.roundNumber} terminada`
-              : isYourTurn
-                ? "Es tu turno"
-                : `Turno de ${currentPlayer?.name ?? "…"}`}
-        </span>
-        <button className="game-leave" onClick={onLeave}>
-          Abandonar
-        </button>
-      </header>
+              </div>
+            </div>
+            <span className="game-turn-status">
+              {isFinished
+                ? state.matchWinnerTeam !== null
+                  ? `Partida terminada — gana ${teamName(state.matchWinnerTeam)}`
+                  : "Partida terminada"
+                : isRoundOver
+                  ? `Ronda ${state.roundNumber} terminada`
+                  : isYourTurn
+                    ? "Es tu turno"
+                    : `Turno de ${currentPlayer?.name ?? "…"}`}
+            </span>
+            <div className="game-header-right">
+              <div className="game-room">
+                <span className="game-room-label">Sala</span>
+                <span className="game-room-code">{state.roomId}</span>
+              </div>
+              <button className="game-leave" onClick={onLeave}>
+                Abandonar
+              </button>
+            </div>
+          </header>
 
-      <section className="game-table">
-        {seatCards.map(({ className, player }) => (
-          <div
-            key={player.id}
-            className={`game-seat ${className} team-${player.team}`}
-          >
-            {/* <span className={`game-team-badge team-${player.team}`}>
+          <section className="game-table">
+            {seatCards.map(({ className, player }) => (
+              <div
+                key={player.id}
+                className={`game-seat ${className} team-${player.team}`}
+              >
+                {/* <span className={`game-team-badge team-${player.team}`}>
               {teamName(player.team)}
             </span> */}
-            <Player
-              player={player}
-              isYou={player.id === youId}
-              isCurrent={player.id === state.currentPlayer}
-              tileCount={state.handCounts[player.id] ?? 0}
-            />
-          </div>
-        ))}
-        <main className="game-board-center">
-          <Board
-            tiles={state.board}
-            dragTileId={dragTileId}
-            dropLeftValid={dropLeftValid}
-            dropRightValid={dropRightValid}
-            onDropTile={handleDrop}
-          />
-        </main>
-      </section>
+                <Player
+                  player={player}
+                  isYou={player.id === youId}
+                  isCurrent={player.id === state.currentPlayer}
+                  tileCount={state.handCounts[player.id] ?? 0}
+                />
+              </div>
+            ))}
+            <main className="game-board-center">
+              <Board
+                tiles={state.board}
+                dragTileId={dragTileId}
+                dropLeftValid={dropLeftValid}
+                dropRightValid={dropRightValid}
+                onDropTile={handleDrop}
+              />
+            </main>
+          </section>
 
-      {(isRoundOver || isFinished) && showResult && (
-        <div className="reveal-overlay" role="dialog" aria-modal="true">
-          <div className="reveal-modal">
-            <h2 className="reveal-title">
-              {finishedReason === "player-left"
-                ? "Partida terminada"
-                : isFinished
-                  ? "¡Partida terminada!"
-                  : `Ronda ${state.roundNumber} terminada`}
-            </h2>
-            <p className="reveal-subtitle">
-              {finishedReason === "player-left" ? (
-                <>Un jugador abandonó la partida. Juego terminado.</>
-              ) : finishedReason === "blocked" ? (
-                <>
-                  Ganan{" "}
-                  <strong>{teamName(state.players, winnerTeam ?? -1)}</strong>,{" "}
-                  <strong>{blocker?.name ?? "…"}</strong> trancó la{" "}
-                  {isFinished ? "partida" : "ronda"} (
-                  {state.teamScores?.[winnerTeam ?? 0] ?? 0} pts vs{" "}
-                  {state.teamScores?.[1 - (winnerTeam ?? 0)] ?? 0} pts).
-                </>
-              ) : (
-                <div style={{fontSize: '22px'}}>
-                  Ganan{" "}
-                  <strong>{teamName(state.players, winnerTeam ?? -1)}</strong>...{" "}
-                  <strong>{winner?.name.toUpperCase() ?? "…"}</strong> se quedó sin fichas.
-                </div>
-              )}
-            </p>
-            <button className="primary" onClick={() => setShowResult(false)} style={{marginTop: "12px", marginBottom: "4px"}}>
-              Mostrar fichas restantes
-            </button>
-          </div>
-        </div>
-      )}
+          {(isRoundOver || isFinished) && showResult && (
+            <div className="reveal-overlay" role="dialog" aria-modal="true">
+              <div className="reveal-modal">
+                <h2 className="reveal-title">
+                  {finishedReason === "player-left"
+                    ? "Partida terminada"
+                    : isFinished
+                      ? "¡Partida terminada!"
+                      : `Ronda ${state.roundNumber} terminada`}
+                </h2>
+                <p className="reveal-subtitle">
+                  {finishedReason === "player-left" ? (
+                    <>Un jugador abandonó la partida. Juego terminado.</>
+                  ) : finishedReason === "blocked" ? (
+                    <>
+                      Ganan{" "}
+                      <strong>{teamName(state.players, winnerTeam ?? -1)}</strong>,{" "}
+                      <strong>{blocker?.name ?? "…"}</strong> trancó la{" "}
+                      {isFinished ? "partida" : "ronda"} (
+                      {state.teamScores?.[winnerTeam ?? 0] ?? 0} pts vs{" "}
+                      {state.teamScores?.[1 - (winnerTeam ?? 0)] ?? 0} pts).
+                    </>
+                  ) : (
+                    <div style={{ fontSize: '22px' }}>
+                      Ganan{" "}
+                      <strong>{teamName(state.players, winnerTeam ?? -1)}</strong>...{" "}
+                      <strong>{winner?.name.toUpperCase() ?? "…"}</strong> se quedó sin fichas.
+                    </div>
+                  )}
+                </p>
+                <button className="primary" onClick={() => setShowResult(false)} style={{ marginTop: "12px", marginBottom: "4px" }}>
+                  Mostrar fichas restantes
+                </button>
+              </div>
+            </div>
+          )}
 
-      {(isRoundOver || isFinished) && !showResult && (
-        <div className="reveal-overlay" role="dialog" aria-modal="true">
-          <div className="reveal-modal">
-            <h2 className="reveal-title">Fichas restantes</h2>
-            <p className="reveal-subtitle">
-              {isRoundOver
-                ? `Así quedaron las manos al terminar la ronda ${state.roundNumber}.`
-                : "Así quedaron las manos al terminar la partida."}
-            </p>
+          {(isRoundOver || isFinished) && !showResult && (
+            <div className="reveal-overlay" role="dialog" aria-modal="true">
+              <div className="reveal-modal">
+                <h2 className="reveal-title">Fichas restantes</h2>
+                <p className="reveal-subtitle">
+                  {isRoundOver
+                    ? `Así quedaron las manos al terminar la ronda ${state.roundNumber}.`
+                    : "Así quedaron las manos al terminar la partida."}
+                </p>
 
-            <ul className="reveal-list">
-              {revealTeams.map(({ team, members }) => (
-                <li key={team} className={`reveal-team team-${team}`}>
-                  <span className="reveal-team-name team-name">
-                    {teamName(team)}
-                  </span>
-                  <div className="reveal-team-players">
-                    {members.map((player) => (
-                      <div key={player.id} className="reveal-member">
-                        <span className="reveal-player">{player.name}</span>
-                        <span className="reveal-tiles">
-                          {sortHandTiles(
-                            state.revealedHands?.[player.id] ?? []
-                          ).map((tile) => (
-                            <span className="reveal-tile" key={tile.id}>
-                              <DominoTile
-                                tile={tile}
-                                size="hand"
-                                orientation="vertical"
-                              />
+                <ul className="reveal-list">
+                  {revealTeams.map(({ team, members }) => (
+                    <li key={team} className={`reveal-team team-${team}`}>
+                      <span className="reveal-team-name team-name">
+                        {teamName(team)}
+                      </span>
+                      <div className="reveal-team-players">
+                        {members.map((player) => (
+                          <div key={player.id} className="reveal-member">
+                            <span className="reveal-player">{player.name}</span>
+                            <span className="reveal-tiles">
+                              {sortHandTiles(
+                                state.revealedHands?.[player.id] ?? []
+                              ).map((tile) => (
+                                <span className="reveal-tile" key={tile.id}>
+                                  <DominoTile
+                                    tile={tile}
+                                    size="hand"
+                                    orientation="vertical"
+                                  />
+                                </span>
+                              ))}
                             </span>
-                          ))}
-                        </span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </li>
-              ))}
-            </ul>
+                    </li>
+                  ))}
+                </ul>
 
-            {isRoundOver ? (
-              <button className="primary" onClick={onStartNextRound}>
-                Siguiente ronda
-              </button>
-            ) : (
-              <button className="primary" onClick={onLeave}>
-                Cerrar
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+                {isRoundOver ? (
+                  <button className="primary" onClick={onStartNextRound}>
+                    Siguiente ronda
+                  </button>
+                ) : (
+                  <button className="primary" onClick={onLeave}>
+                    Cerrar
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
-      {error && <div className="error-banner game-error">{error}</div>}
+          {error && <div className="error-banner game-error">{error}</div>}
 
-      <section className="game-hand-area">
-<PlayerHand
-          tiles={state.yourHand}
-          isYourTurn={isYourTurn}
-          playableIds={playableIds}
-          onTileMouseDown={handleTileMouseDown}
-        />
-        {mustPass && (
-          <div className="game-pass-area">
-            <p>No tienes fichas que puedas colocar en el tablero.</p>
-            <button className="primary" onClick={onPass}>
-              PASO
-            </button>
-          </div>
-        )}
-      </section>
+          <section className="game-hand-area">
+            <PlayerHand
+              tiles={state.yourHand}
+              isYourTurn={isYourTurn}
+              playableIds={playableIds}
+              onTileMouseDown={handleTileMouseDown}
+            />
+          </section>
+
+          {mustPass && (
+            <div className="pass-modal-overlay" role="dialog" aria-modal="true">
+              <div className="pass-modal">
+                <p>No tienes fichas que puedas colocar en el tablero.</p>
+                <button className="primary" onClick={onPass}>
+                  PASO
+                </button>
+              </div>
+            </div>
+          )}
+
+          {lastPass && (
+            <div className="pass-modal-overlay">
+              <div className="pass-modal">
+                <p>
+                  Jugador <strong>{lastPass.name}</strong> ha pasado
+                </p>
+              </div>
+            </div>
+          )}
+
+          {showInvalidDrop && (
+            <div className="pass-modal-overlay">
+              <div className="pass-modal">
+                <p>Esa ficha no va en ese lado del tablero.</p>
+                <button
+                  className="primary"
+                  style={{ padding: "6px 18px" }}
+                  onClick={() => setShowInvalidDrop(false)}
+                >
+                  Entendido
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      {lastPass && (
-        <div className="pass-modal-overlay">
-          <div className="pass-modal">
-            <p>
-              Jugador <strong>{lastPass.name}</strong> ha pasado
-            </p>
-          </div>
-        </div>
-      )}
-
-      {showInvalidDrop && (
-        <div className="pass-modal-overlay">
-          <div className="pass-modal">
-            <p>Esa ficha no va en ese lado del tablero.</p>
-            <button
-              className="primary"
-              style={{ padding: "6px 18px" }}
-              onClick={() => setShowInvalidDrop(false)}
-            >
-              Entendido
-            </button>
-          </div>
-        </div>
-      )}
 
       {dragTileId && dragTile && dragGhost && (
         <div
