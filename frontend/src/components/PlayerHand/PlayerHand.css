@@ -19,3 +19,8 @@
 .player-hand:has(.domino-tile) {
   align-items: flex-start;
 }
+
+.player-hand .tile-dragging {
+  visibility: hidden;
+  pointer-events: none;
+}

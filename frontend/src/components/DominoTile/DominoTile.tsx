@@ -88,6 +88,7 @@ interface DominoTileProps {
   disabled?: boolean;
   draggable?: boolean;
   dimmed?: boolean;
+  className?: string;
   onClick?: () => void;
   onMouseDown?: (event: MouseEvent<HTMLElement>) => void;
   onDragStart?: (event: DragEvent<HTMLElement>) => void;
@@ -102,6 +103,7 @@ export function DominoTile({
   disabled = false,
   draggable = false,
   dimmed = false,
+  className,
   onClick,
   onMouseDown,
   onDragStart,
@@ -118,6 +120,7 @@ export function DominoTile({
     // draggable ? "drag-source" : "",
     draggable ? "" : "",
     dimmed ? "dimmed" : "",
+    className ?? "",
   ]
     .filter(Boolean)
     .join(" ");

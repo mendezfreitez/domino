@@ -5,6 +5,7 @@ import "./PlayerHand.css";
 
 interface PlayerHandProps {
   tiles: Tile[];
+  draggingTileId: string | null;
   isYourTurn: boolean;
   playableIds: Set<string>;
   onTileMouseDown: (tileId: string, event: MouseEvent<HTMLElement>) => void;
@@ -12,6 +13,7 @@ interface PlayerHandProps {
 
 export function PlayerHand({
   tiles,
+  draggingTileId,
   isYourTurn,
   // playableIds,
   onTileMouseDown,
@@ -21,6 +23,7 @@ export function PlayerHand({
       {tiles.map((tile) => {
         // const playable = isYourTurn && playableIds.has(tile.id);
         const playable = isYourTurn;
+        const isDragging = tile.id === draggingTileId;
         return (
           <DominoTile
             key={tile.id}
@@ -29,6 +32,7 @@ export function PlayerHand({
             orientation="vertical"
             playable={playable}
             disabled={!playable && isYourTurn}
+            className={isDragging ? "tile-dragging" : undefined}
             onMouseDown={
               playable ? (event) => onTileMouseDown(tile.id, event) : undefined
             }
