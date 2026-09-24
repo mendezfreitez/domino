@@ -264,6 +264,11 @@ function computeGeometry(
   // Si la ficha de reorientación va antecedida por una doble (que en tramo
   // vertical se dibuja perpendicular, en "T"), se conecta con el extremo lateral
   // de esa doble en lugar de posponer como en el cruce inicial.
+  //
+  // Contacto no doble → no doble: la pieza que se reorienta se apoya en la CARA
+  // LIBRE de la 2ª ficha del tramo (borde superior para UP, inferior para
+  // DOWN), alineada con el borde exterior del tramo. NUNCA se dibuja en "T":
+  // la conexión en "T" solo existe cuando el antecedente es una doble.
   const reorientLimit = end.segSecondDouble
     ? config.reorientLimit + 1
     : config.reorientLimit;
@@ -283,8 +288,10 @@ function computeGeometry(
       cx = up ? prev.x - prevHalf - 1 : prev.x + prevHalf + 1;
       cy = prev.y;
     } else {
-      cx = up ? end.x - 1.5 : end.x + 1.5;
-      cy = up ? end.y + 0.5 : end.y - 0.5;
+      // No doble → no doble: contacto con el borde superior (UP) o inferior
+      // (DOWN) de la última ficha del tramo, sin sobresalir hacia afuera.
+      cx = up ? end.x - 0.5 : end.x + 0.5;
+      cy = up ? end.y - 0.5 : end.y + 0.5;
     }
     return {
       x: cx,

@@ -170,6 +170,7 @@ Restricciones de la reorientación (solo aplican al segundo giro; el cruce inici
 
 * **La ficha que se reorienta debe ser no doble.** Si al alcanzar las 2 fichas contadas del tramo toca reorientar en una ficha doble, esa ficha se coloca recta y la reorientación queda **pospuesta** hasta la siguiente ficha no doble del tramo.
 * Si la ficha de reorientación es **no doble pero está antecedida por una doble** (la doble en un tramo vertical se dibuja perpendicular, en forma de "T"), la ficha **sí se reorienta** y se conecta **con el extremo lateral de esa doble** (el extremo izquierdo para `UP → LEFT` y el derecho para `DOWN → RIGHT`), evitando así colisionar con la propia "T".
+* **Contacto no doble → no doble (nunca es "T"):** si la ficha de reorientación y su antecedente son **ambas no dobles**, la ficha se apoya en la **cara libre** de la 2ª ficha del tramo — el **borde superior** para el tramo que sube (`UP`, lado derecho) y el **borde inferior** para el que baja (`DOWN`, lado izquierdo) — alineada con el **borde exterior** del tramo (no sobresale hacia afuera, no se centra sobre el tramo). La conexión en "T" (la pieza centrada sobre el extremo de otra) **solo existe cuando el antecedente es una doble**.
 
 Un lado solo se reorienta una vez: después de la reorientación el extremo continúa creciendo en horizontal (izquierda o derecha según el lado) y ya no vuelve a girar.
 
@@ -1025,7 +1026,9 @@ Cuando cada tramo vertical cuenta **2 fichas hacia arriba/abajo (incluido el cru
 * El tramo derecho (arriba) reorienta las siguientes fichas hacia la **izquierda** (`7[8][9] → [10][11]`… hacia la izquierda).
 * El tramo izquierdo (abajo) reorienta las siguientes fichas hacia la **derecha**.
 
-Con esto la altura queda acotada a unas **±3.5 unidades** (en lugar de crecer hacia ±14), evitando el overflow vertical de `div.board`. El crecimiento se traslada al eje horizontal. El render usa un **marco fijo por ronda**: el origen queda fijo en el centro del contenedor y la escala (`tileH`) se calcula **una sola vez** (al iniciar la ronda o al redimensionar la ventana) para que una partida completa quepa en la **cabida reservada** de la mesa (medida con la norma actual: radio hasta ±22.3 unidades en X y ±11.1 en Y desde el ancla, más zonas y margen; se reservan **50×28 unidades**), con ajuste "aspect-fit". Mientras crece la cadena la escala y el origen **no cambian**: las fichas ya colocadas conservan su posición en píxeles y no se reposicionan en cada jugada. Si una partida extrema o una ventana muy pequeña exceden la cabida, el contenedor permite desplazarse (scroll como reserva).
+**Contacto de la pieza que se reorienta (caso no doble → no doble):** cuando la ficha de reorientación `[10]` y su antecedente `[9]` son **ambas no dobles**, `[10]` se apoya sobre la **cara libre** de `[9]` — el **borde superior** para el tramo que sube (`UP`, lado derecho) y el **borde inferior** para el que baja (`DOWN`, lado izquierdo) — alineada con el **borde exterior** del tramo, sin sobresalir hacia afuera. Esta conexión **nunca es en "T"**: la pieza queda pegada al costado del extremo, no centrada sobre del tramo. La conexión en "T" solo existe cuando el antecedente es una **doble** (regla 5.2).
+
+Con esto la altura queda acotada a unas **±3.5 unidades** (en lugar de crecer hacia ±14), evitando el overflow vertical de `div.board`. El crecimiento se traslada al eje horizontal. El render usa un **marco fijo por ronda**: el origen queda fijo en el centro del contenedor y la escala (`tileH`) se calcula **una sola vez** (al iniciar la ronda o al redimensionar la ventana) para que una partida completa quepa en la **cabida reservada** de la mesa (medida con la norma actual: radio hasta ±21.7 unidades en X y ±12.1 en Y desde el ancla, más zonas y margen; se reservan **50×28 unidades**), con ajuste "aspect-fit". Mientras crece la cadena la escala y el origen **no cambian**: las fichas ya colocadas conservan su posición en píxeles y no se reposicionan en cada jugada. Si una partida extrema o una ventana muy pequeña exceden la cabida, el contenedor permite desplazarse (scroll como reserva).
 
 ---
 
@@ -1143,6 +1146,7 @@ La implementación será considerada correcta cuando:
 * [ ] Si la 2ª ficha del tramo (la inmediata al cruce) es doble, ese lado retrase la reorientación y la ejecute la 4ª ficha del tramo.
 * [ ] La reorientación solo se ejecute sobre fichas no dobles; si toca en una doble, se posponga a la siguiente ficha del tramo.
 * [ ] Si la ficha de reorientación es no doble antecedida por una doble, se conecte con el extremo lateral de esa doble sin solaparse con ella.
+* [ ] Si la ficha de reorientación y su antecedente son ambas **no dobles**, se conecte con la **cara libre** de la 2ª ficha del tramo (borde superior para `UP`, inferior para `DOWN`), alineada con el borde exterior del tramo y **sin** conexión en "T".
 * [ ] Tras la reorientación el extremo ya no vuelva a girar y continúe en horizontal.
 * [ ] La altura del tablero quede acotada (≈ ±3.5 unidades) y no se genere overflow vertical en `div.board`.
 * [ ] El extremo izquierdo y derecho utilicen direcciones verticales opuestas.
