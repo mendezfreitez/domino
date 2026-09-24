@@ -449,7 +449,7 @@ export function Game({
 
           <section className="game-hand-area">
             <PlayerHand
-              tiles={state.yourHand}
+              tiles={state.yourHand.filter((t) => t.id !== dragTileId)}
               isYourTurn={isYourTurn}
               playableIds={playableIds}
               onTileMouseDown={handleTileMouseDown}
