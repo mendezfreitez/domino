@@ -14,6 +14,18 @@ const DESIGN_HEIGHT = 1080;
 const ZOOM = 1.03;
 const MIN_SCALE = 0.25;
 
+// Distancia de un punto (px de viewport) a un rectángulo: 0 si está dentro,
+// si no, distancia al borde o esquina más cercana.
+function distanceToRect(
+  x: number,
+  y: number,
+  rect: DOMRect
+): number {
+  const dx = Math.max(rect.left - x, 0, x - rect.right);
+  const dy = Math.max(rect.top - y, 0, y - rect.bottom);
+  return Math.hypot(dx, dy);
+}
+
 interface GameProps {
   state: PublicGameState;
   result: GameFinishedPayload | null;
@@ -139,8 +151,36 @@ export function Game({
       const current = latestDrag.current;
       const tileId = current.tileId;
       const el = document.elementFromPoint(event.clientX, event.clientY);
-      const zone =
+      let zone =
         el instanceof Element ? el.closest("[data-drop-side]") : null;
+
+      // Si el puntero no está exactamente sobre una zona, se acepta la zona
+      // más cercana siempre que esté a menos de una longitud de ficha (el ancho
+      // de la zona ya viene escalado por el zoom del tablero).
+      if (!zone) {
+        let best: Element | null = null;
+        let bestDist = Infinity;
+        for (const candidate of document.querySelectorAll(
+          "[data-drop-side]"
+        )) {
+          const rect = candidate.getBoundingClientRect();
+          const dist = distanceToRect(
+            event.clientX,
+            event.clientY,
+            rect
+          );
+          // rect.width equival a una ficha de largo en píxeles reales.
+          if (dist <= rect.width && dist < bestDist) {
+            bestDist = dist;
+            best = candidate;
+          }
+        }
+        zone =
+          best instanceof Element
+            ? best.closest("[data-drop-side]")
+            : null;
+      }
+
       if (zone && tileId) {
         const side = zone.getAttribute("data-drop-side") as
           | "left"
