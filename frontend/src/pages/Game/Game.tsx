@@ -155,8 +155,8 @@ export function Game({
         el instanceof Element ? el.closest("[data-drop-side]") : null;
 
       // Si el puntero no está exactamente sobre una zona, se acepta la zona
-      // más cercana siempre que esté a menos de una longitud de ficha (el ancho
-      // de la zona ya viene escalado por el zoom del tablero).
+      // más cercana siempre que esté a menos de cuatro longitudes de ficha (el
+      // ancho de la zona ya viene escalado por el zoom del tablero).
       if (!zone) {
         let best: Element | null = null;
         let bestDist = Infinity;
@@ -169,8 +169,8 @@ export function Game({
             event.clientY,
             rect
           );
-          // rect.width equival a una ficha de largo en píxeles reales.
-          if (dist <= rect.width && dist < bestDist) {
+          // 4 × rect.width = cuatro fichas de largo en píxeles reales.
+          if (dist <= rect.width * 4 && dist < bestDist) {
             bestDist = dist;
             best = candidate;
           }
@@ -412,6 +412,7 @@ export function Game({
                     <>
                       Ganan{" "}
                       <strong>{teamName(state.players, winnerTeam ?? -1)}</strong>,{" "}
+                      <br />
                       <strong>{blocker?.name ?? "…"}</strong> trancó la{" "}
                       {isFinished ? "partida" : "ronda"} (
                       {state.teamScores?.[winnerTeam ?? 0] ?? 0} pts vs{" "}
