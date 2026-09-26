@@ -407,9 +407,6 @@ const estadoPartida = (state: any) => {
                     <>Un jugador abandonó la partida. Juego terminado.</>
                   ) : finishedReason === "blocked" ? (
                     <>
-                      {/* Ganan{" "}
-                      <strong>{teamName(state.players, winnerTeam ?? -1)}</strong>,{" "}
-                      <br /> */}
                       <strong style={{paddingTop:"4px"}}>{blocker?.name.toUpperCase() ?? "…"}</strong> trancó la{" "}
                       {isFinished ? "partida" : "ronda"}
                     </>
