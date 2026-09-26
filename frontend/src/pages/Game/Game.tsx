@@ -416,10 +416,10 @@ const estadoPartida = (state: any) => {
                       {state.teamScores?.[1 - (winnerTeam ?? 0)] ?? 0} pts).
                     </>
                   ) : (
-                    <div style={{ fontSize: '22px' }}>
+                    <div style={{ fontSize: '2rem' }}>
                       Ganan{" "}
-                      <strong>{teamName(state.players, winnerTeam ?? -1)}</strong>...{" "}
-                      <strong>{winner?.name.toUpperCase() ?? "…"}</strong> se quedó sin fichas.
+                      <strong>{teamName(state.players, winnerTeam ?? -1)}</strong>... <br />
+                      <strong style={{marginTop:'4px'}}>{winner?.name.toUpperCase() ?? "…"}</strong> se quedó sin fichas.
                     </div>
                   )}
                 </p>
