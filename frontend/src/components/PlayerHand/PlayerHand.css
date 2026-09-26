@@ -10,7 +10,7 @@
   width: 24%;
 }
 
-.player-hand.tuTurno {
+.player-hand.tuTurno, .player-card.current {
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: 14px;

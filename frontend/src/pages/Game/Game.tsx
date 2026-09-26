@@ -308,6 +308,23 @@ export function Game({
     }
   }, [state.status, state.roundNumber]);
 
+
+const estadoPartida = (state: any) => {
+  return(
+    isFinished
+                ? state.matchWinnerTeam !== null
+                  ? `Partida terminada — gana ${teamName(state.matchWinnerTeam)}`
+                  : "Partida terminada"
+                : isRoundOver
+                  ? `Ronda ${state.roundNumber} terminada`
+                  : isYourTurn
+                    ? "Es tu turno"
+                    : `Turno de ${currentPlayer?.name ?? "…"}`
+  )
+}
+
+
+
   return (
     <div className="game-viewport">
       <div
@@ -318,10 +335,6 @@ export function Game({
         <div className="game">
           <header className="game-header">
             <div className="game-header-left">
-              {/* <div className="game-room">
-            <span className="game-room-label">Sala</span>
-            <span className="game-room-code">{state.roomId}</span>
-          </div> */}
               <div className="game-scoreboard" aria-label="Marcador de puntos">
                 <span className="game-scoreboard-label">
                   Marcador · Ronda {state.roundNumber || 1}
@@ -340,22 +353,8 @@ export function Game({
                     {(state.teamScores?.[1] ?? 0)} pts
                   </span>
                 </div>
-                {/* <span className="game-scoreboard-label">
-              Objetivo: {state.targetScore ?? 100} pts
-            </span> */}
               </div>
             </div>
-            <span className="game-turn-status">
-              {isFinished
-                ? state.matchWinnerTeam !== null
-                  ? `Partida terminada — gana ${teamName(state.matchWinnerTeam)}`
-                  : "Partida terminada"
-                : isRoundOver
-                  ? `Ronda ${state.roundNumber} terminada`
-                  : isYourTurn
-                    ? "Es tu turno"
-                    : `Turno de ${currentPlayer?.name ?? "…"}`}
-            </span>
             <div className="game-header-right">
               <div className="game-room">
                 <span className="game-room-label">Sala</span>
@@ -373,9 +372,6 @@ export function Game({
                 key={player.id}
                 className={`game-seat ${className} team-${player.team}`}
               >
-                {/* <span className={`game-team-badge team-${player.team}`}>
-              {teamName(player.team)}
-            </span> */}
                 <Player
                   player={player}
                   isYou={player.id === youId}
@@ -391,6 +387,7 @@ export function Game({
                 dropLeftValid={dropLeftValid}
                 dropRightValid={dropRightValid}
                 onDropTile={handleDrop}
+                estadoPartida={estadoPartida(state)}
               />
             </main>
           </section>

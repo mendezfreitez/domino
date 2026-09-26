@@ -51,14 +51,16 @@ export function Player({ player, isYou, isCurrent, tileCount }: PlayerProps) {
     .join(" ");
 
   return (
-    <div className={classes}>
-      <div className="player-card-top">
+    <>
+      {/* <div className="player-card-top">
         {isCurrent && <span className="player-turn">Tu turno</span>}
+      </div> */}
+      <div className={classes}>
+        <div className="player-name">
+          {player.name} {isYou && <em>(tú)</em>}
+        </div>
+        {tileCount > 0 && <MiniTilesBack count={tileCount} />}
       </div>
-      <div className="player-name">
-        {player.name} {isYou && <em>(tú)</em>}
-      </div>
-      {tileCount > 0 && <MiniTilesBack count={tileCount} />}
-    </div>
+    </>
   );
 }

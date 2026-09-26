@@ -121,6 +121,7 @@ export function Board({
   dropLeftValid,
   dropRightValid,
   onDropTile,
+  estadoPartida,
 }: BoardProps) {
   const boardRef = useRef<HTMLDivElement | null>(null);
   const builderRef = useRef<ChainBuilder | null>(null);
@@ -241,8 +242,8 @@ export function Board({
       const next = toResolvedFrame(width, height, tiles.length > 0);
       setFrame((prev) =>
         prev.tileH === next.tileH &&
-        prev.originX === next.originX &&
-        prev.originY === next.originY
+          prev.originX === next.originX &&
+          prev.originY === next.originY
           ? prev
           : next
       );
@@ -322,7 +323,7 @@ export function Board({
     <div
       ref={boardRef}
       className="board"
-      style={{ "--board-tile-h": `${th}px` } as CSSProperties}  
+      style={{ "--board-tile-h": `${th}px` } as CSSProperties}
     >
       <div
         className="board-layer"
@@ -372,6 +373,9 @@ export function Board({
             {...dropHandlers("right", onDropTile)}
           />
         ) : null}
+        <div style={{ position: 'fixed', bottom: '37%', left: '35%', fontSize: '2.7rem', fontWeight: '700', opacity: '.7', width: '700px', textAlign: 'center' }}>
+          {estadoPartida}
+        </div>
       </div>
     </div>
   );
