@@ -270,6 +270,55 @@ for (const p of makePlayers()) {
   assert((r2.state.hands[p.id] ?? []).length === 7, `${p.name} recibe 7 fichas en la ronda 2`);
 }
 
+console.log("--- Espera de confirmación para la siguiente ronda ---");
+
+const r5 = new DominoGame("R5", makePlayers());
+r5.start();
+r5.state.status = "round-over";
+r5.state.currentPlayer = null;
+assert(
+  r5.getPublicState("p0").readyForNextRound.length === 0,
+  "nadie está listo al terminar la ronda"
+);
+assert(
+  r5.markReadyForNextRound("p0")?.started === false,
+  "el primer click no inicia la ronda: falta el resto"
+);
+assert(
+  r5.getPublicState("p2").readyForNextRound.join() === "p0",
+  "el estado público expone qué jugadores ya pulsaron"
+);
+assert(
+  r5.markReadyForNextRound("p0")?.duplicate === true,
+  "repetir el click del mismo jugador es un duplicado"
+);
+assert(
+  r5.state.readyForNextRound.length === 1,
+  "un click repetido no altera la cuenta"
+);
+assert(
+  r5.markReadyForNextRound("nadie") === null,
+  "un jugador ajeno a la partida se rechaza"
+);
+r5.markReadyForNextRound("p1");
+r5.markReadyForNextRound("p2");
+assert(
+  (r5.state.status as string) === "round-over",
+  "con tres jugadores listos la ronda todavía no comienza"
+);
+const lastReady = r5.markReadyForNextRound("p3");
+assert(lastReady?.started === true, "el cuarto click inicia la siguiente ronda");
+assert((r5.state.status as string) === "playing", "la ronda pasa a playing");
+assert(r5.state.roundNumber === 2, "comienza la ronda 2");
+assert(
+  r5.state.readyForNextRound.length === 0,
+  "la lista de listos se limpia al comenzar la ronda"
+);
+assert(
+  r5.markReadyForNextRound("p0") === null,
+  "con la ronda ya iniciada nadie vuelve a confirmar"
+);
+
 console.log("--- Match terminado al alcanzar el objetivo ---");
 
 const r3 = new DominoGame("R3", makePlayers(), { targetScore: 10 });

@@ -50,6 +50,21 @@ function onceEvent(
   });
 }
 
+// Espera activa sobre el estado que mantiene el listener permanente de
+// "game_updated". A diferencia de onceEvent, no se pierde ningún broadcast:
+// varios "game_updated" seguidos solo actualizan el último estado.
+async function waitFor(
+  condition: () => boolean,
+  timeoutMs = 5000
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (condition()) return true;
+    await wait(25);
+  }
+  return condition();
+}
+
 interface TestClient {
   client: ClientSocket;
   playerId: string;
@@ -245,15 +260,40 @@ async function main(): Promise<void> {
       if (anyRoundOver) {
         const roundBefore = sessions[0].state!.roundNumber;
         const scoresBefore = sessions[0].state!.teamScores;
-        const updated = sessions.map(
-          (s) => onceEvent(s.client, "game_updated") as Promise<PublicGameState>
+
+        // Un solo jugador pulsa: la ronda NO debe empezar todavía y todos deben
+        // ver en el estado cuántos falta por confirmar.
+        sessions[0].client.emit("start_next_round");
+        const oneReady = await waitFor(
+          () =>
+            sessions.every(
+              (s) => (s.state?.readyForNextRound.length ?? 0) === 1
+            ),
+          3000
         );
-        // Cualquier jugador (no solo el anfitrión) puede iniciar la siguiente ronda.
-        anyRoundOver.client.emit("start_next_round");
-        const fresh = await Promise.all(updated);
+        assert(oneReady, "el click de un jugador se refleja en el estado");
+        assert(
+          sessions.every((s) => s.state?.status === "round-over"),
+          "con un solo jugador listo la ronda no comienza"
+        );
+
+        // Ahora pulsan todos: con el último click arranca la siguiente ronda.
+        for (const s of sessions) {
+          s.client.emit("start_next_round");
+        }
+        const started = await waitFor(
+          () => sessions.every((s) => s.state?.status === "playing"),
+          5000
+        );
+        assert(started, "con todos los jugadores listos la ronda comienza");
+        const fresh = sessions.map((s) => s.state!);
         assert(
           fresh.every((s) => s.status === "playing"),
-          "start_next_round inicia la siguiente ronda en playing"
+          "con todos los jugadores listos, la siguiente ronda pasa a playing"
+        );
+        assert(
+          fresh.every((s) => s.readyForNextRound.length === 0),
+          "la lista de listos se reinicia al iniciar la ronda"
         );
         assert(
           fresh.every((s) => s.roundNumber === roundBefore + 1),

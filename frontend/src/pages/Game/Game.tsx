@@ -306,6 +306,19 @@ export function Game({
     (p) => p.id === (result?.blockedById ?? state.blockedById)
   );
 
+  // Cada jugador confirma por separado que quiere la siguiente ronda. El estado
+  // llega por broadcast, así que el contador de los que faltan se mantiene vivo
+  // en todas las pantallas sin estado local: cuando ya pulsó el último, el
+  // servidor cambia el status a "playing" y el modal desaparece solo.
+  const readyForNextRound = state.readyForNextRound ?? [];
+  const youAreReady = readyForNextRound.includes(youId);
+  const playersMissing = Math.max(
+    0,
+    state.players.length - readyForNextRound.length
+  );
+  const showWaitingForPlayers =
+    isRoundOver && youAreReady && playersMissing > 0;
+
   // Al terminar ronda/partida se muestra primero el modal de resultado; el de
   // fichas restantes aparece tras pulsar "Mostrar fichas". Si ya se mostró el
   // resultado de esta ronda (match o ronda), al iniciar la siguiente se reinicia.
@@ -491,6 +504,20 @@ const estadoPartida = (state: any) => {
                     Cerrar
                   </button>
                 )}
+              </div>
+            </div>
+          )}
+
+          {showWaitingForPlayers && (
+            <div className="wait-overlay" role="dialog" aria-modal="true">
+              <div className="pass-modal">
+                <p>
+                  Esperando a {playersMissing}{" "}
+                  {playersMissing === 1 ? "jugador" : "jugadores"}
+                </p>
+                <span className="wait-modal-note">
+                  Los demás jugadores deben pulsar “Siguiente ronda”.
+                </span>
               </div>
             </div>
           )}

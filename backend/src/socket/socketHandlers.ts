@@ -272,15 +272,16 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager): vo
       const room = roomManager.getRoom(roomId);
       if (!room || !room.game) return;
 
-      if (room.game.state.status !== "round-over") {
+      const res = room.game.markReadyForNextRound(playerId);
+      if (res === null) {
         socket.emit("invalid_move", {
           message: "La partida no está en estado de ronda terminada.",
         });
         return;
       }
-
-      // Cualquier jugador puede iniciar la siguiente ronda.
-      room.game.startNextRound();
+      if (res.duplicate) {
+        return;
+      }
       broadcastGameState(io, room);
     });
 
@@ -300,9 +301,18 @@ export function registerSocketHandlers(io: Server, roomManager: RoomManager): vo
 
       emitRoomUpdated(io, result.room);
 
-      if (result.room.game && result.room.game.state.status === "playing") {
-        result.room.game.finishBecausePlayerLeft();
+      if (!result.room.game) return;
+      const game = result.room.game;
+      if (game.state.status === "playing") {
+        game.finishBecausePlayerLeft();
         emitGameFinished(io, result.room);
+        return;
+      }
+      if (game.state.status === "round-over") {
+        const res = game.markReadyForNextRound(playerId);
+        if (res !== null && !res.duplicate) {
+          broadcastGameState(io, result.room);
+        }
       }
     });
   });

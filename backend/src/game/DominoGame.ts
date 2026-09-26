@@ -40,6 +40,7 @@ export class DominoGame {
       currentStarterId: null,
       matchWinnerTeam: null,
       targetScore: options?.targetScore ?? MATCH_TARGET_SCORE,
+      readyForNextRound: [],
     };
   }
 
@@ -92,6 +93,26 @@ export class DominoGame {
     this.startNewRound();
   }
 
+  markReadyForNextRound(playerId: string):
+    | { started: boolean; duplicate: boolean }
+    | null {
+    if (this.state.status !== "round-over") return null;
+    const exists = this.state.players.some((p) => p.id === playerId);
+    if (!exists) return null;
+    const list = this.state.readyForNextRound;
+    if (list.includes(playerId)) {
+      return { started: false, duplicate: true };
+    }
+    list.push(playerId);
+    const allReady = this.state.players.length > 0 &&
+      list.length >= this.state.players.length;
+    if (allReady) {
+      this.startNewRound();
+      return { started: true, duplicate: false };
+    }
+    return { started: false, duplicate: false };
+  }
+
   private startNewRound(): void {
     const tiles = DominoGame.shuffleTiles(DominoGame.createTiles());
     this.state.hands = DominoGame.dealTiles(tiles, this.state.players);
@@ -120,6 +141,7 @@ export class DominoGame {
     this.state.winnerReason = null;
     this.state.blockedById = null;
     this.state.currentPlayer = this.state.currentStarterId;
+    this.state.readyForNextRound = [];
     this.state.status = "playing";
   }
 
@@ -312,6 +334,7 @@ export class DominoGame {
       matchWinnerTeam: this.state.matchWinnerTeam,
       mustPass: this.currentMustPass(),
       revealedHands,
+      readyForNextRound: [...this.state.readyForNextRound],
     };
   }
 

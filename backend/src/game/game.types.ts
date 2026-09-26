@@ -31,6 +31,7 @@ export interface GameState {
   currentStarterId: string | null;
   matchWinnerTeam: number | null;
   targetScore: number;
+  readyForNextRound: string[];
 }
 
 export interface PublicGameState {
@@ -52,6 +53,7 @@ export interface PublicGameState {
   matchWinnerTeam: number | null;
   mustPass: boolean;
   revealedHands: Record<string, DominoTile[]>;
+  readyForNextRound: string[];
 }
 
 export type MoveResult =

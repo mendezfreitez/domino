@@ -24,6 +24,7 @@ export interface PublicGameState {
   matchWinnerTeam: number | null;
   mustPass: boolean;
   revealedHands: Record<string, DominoTile[]>;
+  readyForNextRound: string[];
 }
 
 export interface RoomInfo {

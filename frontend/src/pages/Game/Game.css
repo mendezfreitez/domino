@@ -307,6 +307,24 @@ body.domino-dragging {
   }
 }
 
+/* Modal de espera de la siguiente ronda: se superpone al de conteo
+   (reveal-overlay, z-index 50) para taparlo mientras faltan jugadores. */
+.wait-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 60;
+}
+
+.wait-modal-note {
+  color: var(--text-dim);
+  font-size: 1.2rem;
+  text-align: center;
+}
+
 /* Modal de fin de partida: revela las manos de los demás jugadores */
 .reveal-overlay {
   position: fixed;
