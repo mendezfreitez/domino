@@ -272,23 +272,30 @@ export function Game({
       seat.player !== undefined
   );
 
-  // Modal de revelado: la misma vista para todos los jugadores. Muestra una
-  // fila por equipo (0 y luego 1) únicamente con los jugadores que quedaron
-  // realmente con fichas en mano; dentro de cada mano las fichas se ordenan de
-  // menor a mayor (sortHandTiles). Quien se quedó sin fichas no aparece.
+  // Modal de conteo de fichas: muestra una fila por equipo (0 y luego 1)
+  // siempre —quien se quedó sin fichas aparece sin ellas— con las manos
+  // ordenadas de menor a mayor (sortHandTiles) y, por equipo, la sumatoria de
+  // puntos de las fichas restantes (cada ficha vale `left + right`).
   const revealTeams = useMemo(() => {
     const groups = new Map<number, PlayerType[]>();
+    const pips = new Map<number, number>();
     for (const player of state.players) {
-      const count = (state.revealedHands?.[player.id] ?? []).length;
-      if (count === 0) continue;
+      const hand = state.revealedHands?.[player.id] ?? [];
+      const playerPips = hand.reduce((sum, t) => sum + t.left + t.right, 0);
+      pips.set(player.team, (pips.get(player.team) ?? 0) + playerPips);
       const list = groups.get(player.team);
       if (list) list.push(player);
       else groups.set(player.team, [player]);
     }
-    const order = [...groups.keys()].sort((a, b) => a - b);
+    const order = [...new Set(state.players.map((p) => p.team))].sort(
+      (a, b) => a - b
+    );
     return order.map((team) => ({
       team,
-      members: groups.get(team) ?? [],
+      totalPips: pips.get(team) ?? 0,
+      members: (groups.get(team) ?? []).filter(
+        (player) => (state.revealedHands?.[player.id] ?? []).length > 0
+      ),
     }));
   }, [state.players, state.revealedHands]);
 
@@ -419,7 +426,7 @@ const estadoPartida = (state: any) => {
                   )}
                 </p>
                 <button className="primary" onClick={() => setShowResult(false)} style={{ marginTop: "12px", marginBottom: "4px" }}>
-                  Mostrar fichas restantes
+                  VER CONTEO DE FICHAS
                 </button>
               </div>
             </div>
@@ -428,19 +435,25 @@ const estadoPartida = (state: any) => {
           {(isRoundOver || isFinished) && !showResult && (
             <div className="reveal-overlay" role="dialog" aria-modal="true">
               <div className="reveal-modal">
-                <h2 className="reveal-title">Fichas restantes</h2>
+                <h2 className="reveal-title">Conteo de fichas</h2>
                 <p className="reveal-subtitle">
-                  {isRoundOver
-                    ? `Así quedaron las manos al terminar la ronda ${state.roundNumber}.`
-                    : "Así quedaron las manos al terminar la partida."}
+                  {winnerTeam !== null && (
+                    <>
+                      Ganan{" "}
+                      <strong>{teamName(state.players, winnerTeam)}</strong>
+                      {finishedReason === "blocked"
+                        ? ""
+                        : finishedReason === "empty-hand"
+                          ? " — se quedó sin fichas"
+                          : ""}.{" "}
+                    </>
+                  )}
                 </p>
 
                 <ul className="reveal-list">
-                  {revealTeams.map(({ team, members }) => (
+                  {revealTeams.map(({ team, totalPips, members }) => (
                     <li key={team} className={`reveal-team team-${team}`}>
-                      <span className="reveal-team-name team-name">
-                        {teamName(team)}
-                      </span>
+                  
                       <div className="reveal-team-players">
                         {members.map((player) => (
                           <div key={player.id} className="reveal-member">
@@ -461,6 +474,10 @@ const estadoPartida = (state: any) => {
                           </div>
                         ))}
                       </div>
+                      <span className="reveal-team-total">
+                        Total: {totalPips}{" "}
+                        {totalPips === 1 ? "punto" : "puntos"}
+                      </span>
                     </li>
                   ))}
                 </ul>

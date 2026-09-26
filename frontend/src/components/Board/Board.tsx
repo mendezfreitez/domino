@@ -67,6 +67,7 @@ interface BoardProps {
   dropLeftValid: boolean;
   dropRightValid: boolean;
   onDropTile: (tileId: string, side: "left" | "right") => void;
+  estadoPartida: string;
 }
 
 function dropHandlers(
