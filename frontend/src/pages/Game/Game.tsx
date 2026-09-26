@@ -410,7 +410,7 @@ const estadoPartida = (state: any) => {
                       Ganan{" "}
                       <strong>{teamName(state.players, winnerTeam ?? -1)}</strong>,{" "}
                       <br />
-                      <strong>{blocker?.name ?? "…"}</strong> trancó la{" "}
+                      <strong style={{paddingTop:"4px"}}>{blocker?.name.toUpperCase() ?? "…"}</strong> trancó la{" "}
                       {isFinished ? "partida" : "ronda"} (
                       {state.teamScores?.[winnerTeam ?? 0] ?? 0} pts vs{" "}
                       {state.teamScores?.[1 - (winnerTeam ?? 0)] ?? 0} pts).
