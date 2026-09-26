@@ -37,10 +37,11 @@
 .board-empty p {
   color: var(--text-dim);
   margin: 0;
-  padding: 2rem;
-  background: var(--bg-panel);
+  padding: 1.6rem;
+  background: #1a212b6b;
   border: 1px dashed var(--border);
   border-radius: 14px;
+  font-size: 1.8rem;
 }
 
 .board-drop {
