@@ -215,13 +215,6 @@ export function Lobby({ roomId, players, playerId, error, onLeave }: LobbyProps)
           Se necesitan 2 jugadores en cada equipo para iniciar.
         </p>
       )}
-
-      {isHost && (
-        <p className="lobby-tip">
-          Arrastra un jugador sobre otro del equipo contrario para
-          intercambiarlos.
-        </p>
-      )}
     </div>
   );
 }
