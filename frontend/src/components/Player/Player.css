@@ -1,6 +1,6 @@
 .player-card {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
+  /* background: var(--bg-panel); */
+  /* border: 1px solid var(--border); */
   border-radius: 12px;
   padding: 0px 2px 10px 2px;
   display: flex;
@@ -8,7 +8,7 @@
   flex-direction: column;
   gap: 0.3rem;
   font-size: 20px;
-  width: 140px;
+  width: 154px;
 }
 
 .player-card.current {

@@ -263,7 +263,7 @@
 .pass-modal p {
   margin: 0;
   color: var(--text);
-  font-size: 1rem;
+  font-size: 1.4rem;
 }
 
 .pass-modal p strong {

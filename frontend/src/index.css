@@ -27,7 +27,9 @@ body,
 
 body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: radial-gradient(circle at 50% 0%, #182332 0%, var(--bg) 65%);
+  /* background: radial-gradient(circle at 50% 0%, #182332 0%, var(--bg) 65%); */
+  /* background: radial-gradient(circle at 50% 50%, #124741 1%, var(--bg) 106%); */
+  background: radial-gradient(circle at 50% 50%, #0e4944 1%, var(--bg) 106%);
   color: var(--text);
 }
 
