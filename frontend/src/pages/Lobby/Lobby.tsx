@@ -134,7 +134,7 @@ export function Lobby({ roomId, players, playerId, error, onLeave }: LobbyProps)
           </button>
         </div>
         <span className="lobby-count">
-          {players.length} / {PLAYERS_PER_TEAM * TEAMS.length} jugadores
+          <b>{players.length} / {PLAYERS_PER_TEAM * TEAMS.length}</b> jugadores
         </span>
       </section>
 
