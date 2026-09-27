@@ -15,11 +15,21 @@ export type GameStatus = "waiting" | "playing" | "round-over" | "finished";
 
 export type WinnerReason = "empty-hand" | "blocked" | "player-left";
 
+/**
+ * Estado completo y persistible de una partida.
+ *
+ * Cualquier campo que afecte al desarrollo del juego vive aquí: este objeto es
+ * lo que se guarda en SQLite y lo que permite reconstruir la partida tras
+ * recargar la página o reiniciar el backend.
+ */
 export interface GameState {
   roomId: string;
   players: Player[];
   hands: Record<string, DominoTile[]>;
+  /** Fichas colocadas en el tablero, en orden de izquierda a derecha. */
   board: DominoTile[];
+  /** Fichas del pozo. Vacío en esta variante (reparto exacto de 28 fichas). */
+  bunk: DominoTile[];
   currentPlayer: string | null;
   status: GameStatus;
   winnerId: string | null;
@@ -32,6 +42,11 @@ export interface GameState {
   matchWinnerTeam: number | null;
   targetScore: number;
   readyForNextRound: string[];
+  /**
+   * Contador monotónico que se incrementa en cada cambio de estado. Permite
+   * descartar estados atrasados y detectar divergencias al reconectar.
+   */
+  revision: number;
 }
 
 export interface PublicGameState {
@@ -54,6 +69,18 @@ export interface PublicGameState {
   mustPass: boolean;
   revealedHands: Record<string, DominoTile[]>;
   readyForNextRound: string[];
+  /** Estado persistido más reciente; el cliente descarta lo que sea anterior. */
+  revision: number;
+}
+
+/**
+ * Estado público tal y como se envía a un jugador concreto: el estado de juego
+ * que puede ver (su mano y la información común) más la información de sesión
+ * que solo el servidor conoce (quién está conectado, si está persistido).
+ */
+export interface GameStateForPlayer extends PublicGameState {
+  connectedPlayerIds: string[];
+  persisted: boolean;
 }
 
 export type MoveResult =

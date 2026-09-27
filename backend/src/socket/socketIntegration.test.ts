@@ -2,11 +2,14 @@ import { createServer } from "node:http";
 import { Socket as ClientSocket, io as ioc } from "socket.io-client";
 import { Server } from "socket.io";
 import { PublicGameState } from "../game/game.types.js";
+import { GameRepository } from "../persistence/GameRepository.js";
 import { RoomManager } from "../rooms/RoomManager.js";
 import { registerSocketHandlers } from "./socketHandlers.js";
 
 const PORT = 3101;
 const URL = `http://localhost:${PORT}`;
+const LEAVE_PORT = 3102;
+const LEAVE_URL = `http://localhost:${LEAVE_PORT}`;
 
 let passed = 0;
 let failed = 0;
@@ -25,9 +28,9 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function connectClient(): Promise<ClientSocket> {
+function connectClient(url = URL): Promise<ClientSocket> {
   return new Promise((resolve, reject) => {
-    const client = ioc(URL, { transports: ["websocket"], forceNew: true });
+    const client = ioc(url, { transports: ["websocket"], forceNew: true });
     client.once("connect", () => resolve(client));
     client.once("connect_error", reject);
   });
@@ -89,9 +92,23 @@ function pickPlayable(state: PublicGameState): string | null {
 async function main(): Promise<void> {
   const httpServer = createServer();
   const io = new Server(httpServer, { cors: { origin: "*" } });
-  const roomManager = new RoomManager();
+  // Persistencia real (en memoria) para comprobar que guardar en cada jugada no
+  // altera el juego. La reconexión como tal se prueba en persistenceIntegration.
+  const repository = new GameRepository({ path: ":memory:" });
+  const roomManager = new RoomManager(repository);
   registerSocketHandlers(io, roomManager);
   await new Promise<void>((resolve) => httpServer.listen(PORT, resolve));
+
+  // Servidor auxiliar sin ventana de gracia, para comprobar el abandono
+  // inmediato sin esperar al plazo de reconexión del servidor principal.
+  const leaveHttpServer = createServer();
+  const leaveIo = new Server(leaveHttpServer, { cors: { origin: "*" } });
+  registerSocketHandlers(
+    leaveIo,
+    new RoomManager(new GameRepository({ path: ":memory:" })),
+    { disconnectGraceMs: 0 }
+  );
+  await new Promise<void>((resolve) => leaveHttpServer.listen(LEAVE_PORT, resolve));
 
   const sessions: TestClient[] = [];
 
@@ -411,10 +428,10 @@ async function main(): Promise<void> {
 
     const sessionsBefore = sessions.map((s) => s.client.id);
     // Jugar una partida nueva en otra sala para probar player_left
-    const x1 = await connectClient();
-    const x2 = await connectClient();
-    const x3 = await connectClient();
-    const x4 = await connectClient();
+    const x1 = await connectClient(LEAVE_URL);
+    const x2 = await connectClient(LEAVE_URL);
+    const x3 = await connectClient(LEAVE_URL);
+    const x4 = await connectClient(LEAVE_URL);
 
     const created2 = (await new Promise((resolve) => {
       x1.once("room_created", resolve as never);
@@ -449,9 +466,15 @@ async function main(): Promise<void> {
     for (const s of sessions) s.client.close();
   } finally {
     io.close();
+    leaveIo.close();
+    repository.close();
     await new Promise<void>((resolve) => {
       httpServer.closeAllConnections();
       httpServer.close(() => resolve());
+    });
+    await new Promise<void>((resolve) => {
+      leaveHttpServer.closeAllConnections();
+      leaveHttpServer.close(() => resolve());
     });
   }
 

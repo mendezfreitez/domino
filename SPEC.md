@@ -37,9 +37,19 @@ No es obligatorio utilizar Tailwind CSS.
 
 ## Persistencia
 
-No utilizar base de datos en esta primera versión.
+La partida se guarda en **SQLite**, en una capa propia y separada
+(`backend/src/persistence/`) que es la única que escribe SQL. El resto del
+backend —Game Engine, `RoomManager` y los handlers de Socket.IO— solo la usa a
+través de su interfaz (`createGame`, `saveGame`, `getGame`, `updateGame`,
+`deleteGame`, `gameExists`, …), de modo que las reglas de juego no contienen
+ninguna consulta SQL y no dependen del almacenamiento.
 
-El estado de las salas y partidas debe mantenerse en memoria RAM del servidor.
+Detalle en `frontend/src/components/specs/persistencia-partida.md`.
+
+El estado guardado es completo (jugadores, manos, tablero, turno, marcador,
+ronda, configuración y fichas del pozo) y se escribe **antes** de confirmar
+cualquier cambio al cliente: si SQLite falla, el cambio se deshace y el jugador
+recibe un error, nunca una jugada que el servidor no pueda recuperar.
 
 ---
 
@@ -87,8 +97,8 @@ La aplicación debe utilizar una arquitectura cliente-servidor.
 │   Game Engine        │
 │   Room Manager       │
 │   Game State         │
-│                      │
-└──────────┬───────────┘
+│   Persistencia       │
+└──────────┼─ SQLite ──┘
            │
            │ WebSocket
      ┌─────┼─────┬─────┐
@@ -118,6 +128,8 @@ El servidor debe controlar:
 * Validación de jugadas.
 * Cambio de turno.
 * Finalización de la partida.
+* Persistencia del estado de la partida.
+* Reconexión de un jugador que recarga o pierde la conexión.
 
 El frontend debe encargarse principalmente de:
 
@@ -128,6 +140,10 @@ El frontend debe encargarse principalmente de:
 * Mostrar el turno.
 * Enviar acciones del jugador al servidor.
 * Recibir y renderizar el estado actualizado.
+* Conservar el código de sala y el id de jugador para poder reconectar.
+
+El frontend no guarda más que eso: es una representación del estado que
+envía el servidor.
 
 ---
 
@@ -198,8 +214,13 @@ interface Player {
     id: string;
     name: string;
     position: number;
+    team: number;   // 0 | 1, usado por el match por puntos (§29)
 }
 ```
+
+El `id` es lo que permite reconocer al jugador cuando vuelve a conectarse: es
+la única identidad que el servidor necesita y no requiere autenticación
+(§3).
 
 Las posiciones deben ser:
 
@@ -349,15 +370,46 @@ El servidor debe mantener un estado similar a:
 ```typescript
 interface GameState {
     roomId: string;
-    players: Player[];
-    hands: Record<string, DominoTile[]>;
-    board: DominoTile[];
-    currentPlayer: string;
-    status: "waiting" | "playing" | "finished";
+    players: Player[];                    // id, nombre, posición y equipo
+    hands: Record<string, DominoTile[]>;  // mano completa de cada jugador
+    board: DominoTile[];                  // fichas colocadas, de izquierda a derecha
+    bunk: DominoTile[];                   // fichas del pozo (vacío en esta variante)
+    currentPlayer: string | null;
+    status: "waiting" | "playing" | "round-over" | "finished";
+    winnerId: string | null;
+    winnerTeam: number | null;
+    winnerReason: "empty-hand" | "blocked" | "player-left" | null;
+    blockedById: string | null;
+    teamScores: [number, number];
+    roundNumber: number;
+    currentStarterId: string | null;
+    matchWinnerTeam: number | null;
+    targetScore: number;
+    readyForNextRound: string[];
+    revision: number;                     // contador monotónico de cambios de estado
 }
 ```
 
 El estado debe pertenecer a una sala concreta.
+
+Este estado es **persistente**: es exactamente el objeto que se serializa y se
+guarda en SQLite (ver §13), de modo que una partida recargada o tras un reinicio
+del backend se reconstruye desde aquí y no desde memoria del proceso.
+
+Reglas sobre el estado:
+
+* El servidor es el único que escribe. Ningún cliente puede modificarlo ni
+  competir por escribirlo: el frontend es una representación del estado del
+  servidor.
+* Todo campo que afecte al desarrollo del juego vive en `GameState`. Si un campo
+  no está ahí, no se persiste y la partida se rompe al reconectar.
+* Cada cambio incrementa `revision`. El cliente descarta cualquier estado con una
+  `revision` menor que la que ya tiene, lo que evita que una reconexión vea
+  un estado atrasado.
+* El estado que sale hacia un jugador concreto no es `GameState`: es el estado
+  público derivado de él (mano propia, conteos de manos, tablero, turnos,
+  marcador) más la información de sesión. Las manos de los demás nunca viajan al
+  cliente (ver §20).
 
 ---
 
@@ -373,6 +425,7 @@ joinRoom()
 leaveRoom()
 getRoom()
 removeRoom()
+loadRoomForPlayer()   // rehidratación tras recargar o reconectar
 ```
 
 Debe poder almacenar varias partidas simultáneamente.
@@ -383,7 +436,83 @@ Ejemplo conceptual:
 Map<string, Room>
 ```
 
-No utilizar una base de datos.
+## Persistencia
+
+El estado en memoria no es suficiente: si el proceso se reinicia, la partida se
+pierde y el jugador que recarga la página vuelve a un juego que ya no existe.
+
+La persistencia va en una **capa aparte**, sin SQL dentro de la lógica de juego.
+El Game Engine y el Room Manager no escriben consultas: hablan con un
+repositorio a través de una interfaz de este estilo:
+
+```typescript
+createGame()
+saveGame()
+getGame()
+updateGame()
+deleteGame()
+gameExists()
+```
+
+Responsabilidades de esa capa:
+
+* abrir SQLite, crear el esquema y cerrarlo de forma ordenada;
+* serializar y validar el `GameState` completo al leer y al escribir, de forma
+  que un estado corrupto se rechace con un error explícito en lugar de
+  devolver una partida imposible;
+* reflejar la lista de jugadores para poder localizar la sala de un jugador;
+* degradar en modo memoria si la base de datos no está disponible, sin tumbar el
+  servidor: la partida sigue siendo jugable y el cliente recibe un aviso de que
+  no está persistida.
+
+Reglas de consistencia:
+
+* una jugada no está "aplicada" hasta que se ha guardado. El flujo es
+  *instantánea → mutación → `revision++` → persistir → difundir*: si el guardado
+  falla, se restaura el estado anterior y se lanza el error. Nunca se difunde un
+  estado que luego se pierde.
+* se persiste en cada cambio relevante: jugar, robar, pasar, cambio de turno,
+  marcador, inicio y fin de ronda, entrada y salida de jugadores.
+* las mutaciones concurrentes sobre la misma sala se serializan, de modo que dos
+  sockets no puedan persistir el mismo estado a la vez.
+
+El Room Manager escribe siempre a través de esa capa (`commit()`), y es también
+el punto de entrada de la reconexión (`loadRoomForPlayer()`): busca primero en
+memoria, y si no está, la recupera de la base de datos, valida que el jugador
+pertenece a la sala y devuelve el estado completo listo para enviarle.
+
+## Reconexión
+
+El cliente guarda solo dos cosas en el navegador: el código de sala y su id de
+jugador. Con eso basta para volver a la partida; no guarda ni manos ni tablero.
+
+```text
+Jugador recarga la página
+   │
+   ▼
+El cliente se conecta y envía resume_session { roomId, playerId }
+   │
+   ▼
+loadRoomForPlayer()
+   │
+   ├── ► en memoria: se usa esa sala
+   └── ► no está: se recupera de SQLite y se rehidrata
+   │
+   ▼
+¿El jugador pertenece a esa sala?
+   │
+   ├── no ► resume_failed (sala no encontrada / no persistida / estado dañado)
+   └── sí ► room_resumed con el estado público completo de ese jugador
+```
+
+El cliente aplica el estado recibido como si fuera uno más del juego: mismo
+tablero, mismo turno, mismo marcador y misma mano. La única protección es
+`revision`: si el estado que llega es anterior al que ya tiene, lo descarta.
+
+Perder la conexión no es abandonar. Se abre una ventana de gracia configurable
+(`RECONNECT_GRACE_MS`): durante ella el jugador sigue en la mesa, marcado como
+"esperando" para el resto, y si vuelve se le reencola sin cambiar nada. Abandonar
+es una acción explícita (`leave_game`) que no espera esa ventana.
 
 ---
 
@@ -459,24 +588,40 @@ Eventos mínimos:
 ### Cliente → servidor
 
 ```text
-create_room
-join_room
-start_game
-play_tile
+create_room        // crear sala
+join_room          // unirse a una sala
+resume_session     // reconectar: { roomId, playerId }
+leave_game         // abandonar la partida (definitivo, no espera la gracia)
+start_game         // el host inicia la partida
+move_player        // cambiar de equipo en el lobby
+swap_players       // intercambiar posiciones en el lobby
+play_tile          // jugar una ficha
+pass_turn          // pasar el turno
+start_next_round   // siguiente ronda del match por puntos
 ```
 
 ### Servidor → cliente
 
 ```text
-room_created
-room_updated
-game_started
-game_updated
-invalid_move
-game_finished
-player_joined
-player_left
+room_created          // el creador recibe su sala y su id de jugador
+room_updated          // la sala cambia (estado de espera)
+room_resumed          // reconexión correcta: id de jugador + estado completo
+resume_failed         // reconexión rechazada: mensaje y código
+room_error            // error puntual de una acción del cliente
+player_joined         // alguien entra en la sala
+player_left           // alguien abandona definitivamente
+player_disconnected   // alguien perdió la conexión (entra en la ventana de gracia)
+player_reconnected    // alguien volvió dentro del plazo
+game_started          // la partida empezó
+game_updated          // nuevo estado público (enviado a cada jugador por separado)
+player_passed         // un jugador pasó
+round_started         // empezó una ronda nueva
+game_finished         // la ronda o el match terminou
+invalid_move          // jugada o acción no permitida
 ```
+
+`game_updated` se emite una vez por jugador, con el estado público ya filtrado
+(§20): cada uno recibe su mano y los conteos de las demás.
 
 Los nombres pueden modificarse si existe una convención mejor, pero deben mantenerse consistentes.
 
@@ -681,7 +826,8 @@ domino-online/
 │   │   │   └── Game/
 │   │   │
 │   │   ├── services/
-│   │   │   └── socket.ts
+│   │   │   ├── socket.ts
+│   │   │   └── session.ts
 │   │   │
 │   │   ├── types/
 │   │   │   ├── Domino.ts
@@ -703,6 +849,11 @@ domino-online/
 │   │   │
 │   │   ├── socket/
 │   │   │   └── socketHandlers.ts
+│   │   │
+│   │   ├── persistence/
+│   │   │   ├── Database.ts
+│   │   │   ├── GameRepository.ts
+│   │   │   └── stateCodec.ts
 │   │   │
 │   │   └── server.ts
 │   │
@@ -770,9 +921,16 @@ No implementar infraestructura adicional que no sea necesaria para cumplir los r
 
 La primera versión estará terminada cuando cuatro navegadores/dispositivos puedan conectarse a una misma sala y jugar una partida completa de dominó Double-Six en tiempo real, con el servidor controlando las reglas y sincronizando correctamente el estado.
 
-No se requiere persistencia de partidas.
+## Persistencia y reconexión
 
-Si el servidor se reinicia, las partidas existentes pueden perderse.
+Además, la partida debe sobrevivir tanto a recargar la página como a reiniciar el servidor:
+
+* el jugador que recarga vuelve a la misma partida con el mismo tablero, turno, marcador, jugadores y mano, y puede seguir jugando;
+* lo mismo ocurre tras reiniciar el backend, porque el estado se recupera de SQLite;
+* una recarga o una pérdida de conexión no abandonan la partida: el jugador sigue en la mesa durante una ventana de gracia y los demás ven que está esperando;
+* el botón de abandonar sí es definitivo y no espera esa ventana;
+* si la partida ya no existe, el jugador no pertenece a ella o el estado guardado está corrupto, el servidor lo rechaza con un mensaje claro en lugar de dejar la interfaz colgada;
+* sin base de datos el juego sigue siendo jugable en memoria, y el cliente recibe un aviso de que esa partida no está persistida.
 
 ---
 
@@ -781,28 +939,25 @@ Si el servidor se reinicia, las partidas existentes pueden perderse.
 Estas funcionalidades quedan explícitamente fuera del MVP y podrán agregarse posteriormente:
 
 ```text
-Base de datos
-     ↓
-Usuarios
-     ↓
-Login
-     ↓
-Persistencia
-     ↓
-Historial
-     ↓
+Base de datos multi-servidor
+      ↓
+Historial de partidas
+      ↓
 Estadísticas
-     ↓
+      ↓
 Ranking
-     ↓
+      ↓
 Matchmaking
-     ↓
+      ↓
 Redis
-     ↓
+      ↓
 Escalabilidad
 ```
 
-No implementar ninguna de ellas hasta que el MVP descrito anteriormente esté funcionando correctamente.
+Lo que queda por debajo de la línea ya está resuelto en el MVP: la capa de
+persistencia en SQLite y la reconexión del jugador. Lo que sigue pendiente es
+todo lo que va *más allá* de una partida: cuentas, historial consultable y
+escalado horizontal.
 
 ---
 
@@ -849,5 +1004,8 @@ round-over ──(start_next_round, cualquier jugador)──► playing         
 
 * `start_next_round`: lo puede emitir **cualquier jugador** de la sala (no solo el host),
   siempre que la partida esté en `round-over`.
-* Si un jugador se desconecta durante una ronda, la partida pasa directamente a `finished`
-  (razón `player-left`), sin ofrecer "Siguiente ronda".
+* Si un jugador se desconecta durante una ronda, **no** se le expulsa de inmediato: se
+  abre una ventana de gracia y el resto sigue jugando con él esperando. Si vuelve
+  dentro del plazo, la partida continúa donde estaba. Si el plazo se agota, o si el
+  jugador pulsa abandonar, entonces sí: la ronda pasa a `finished` con razón
+  `player-left`, sin ofrecer "Siguiente ronda".

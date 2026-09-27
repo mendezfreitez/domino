@@ -25,6 +25,19 @@ export interface PublicGameState {
   mustPass: boolean;
   revealedHands: Record<string, DominoTile[]>;
   readyForNextRound: string[];
+  /**
+   * Revisión del estado en el servidor. El backend la incrementa en cada cambio
+   * guardado, así que el cliente puede ignorar un `game_updated` que haya
+   * llegado tarde (por ejemplo tras reconectar) y quedarse con lo más reciente.
+   */
+  revision: number;
+  /** Quién tiene una conexión activa. El resto sigue en la mesa, esperando. */
+  connectedPlayerIds: string[];
+  /**
+   * `false` cuando el backend no tiene base de datos disponible: la partida
+   * sigue siendo jugable en memoria, pero no sobrevive a un reinicio.
+   */
+  persisted: boolean;
 }
 
 export interface RoomInfo {
@@ -32,6 +45,59 @@ export interface RoomInfo {
   players: Player[];
   status: GameStatus;
   hostId: string;
+  connectedPlayerIds?: string[];
+  gameStarted?: boolean;
+}
+
+/** Causas por las que el backend puede rechazar una reconexión. */
+export type ResumeErrorCode =
+  | "not-found"
+  | "not-a-member"
+  | "corrupt"
+  | "persistence-unavailable";
+
+export interface RoomCreatedPayload extends RoomInfo {
+  playerId: string;
+  position: number;
+  gameStarted: boolean;
+}
+
+export interface RoomResumedPayload extends RoomInfo {
+  playerId: string;
+  position: number;
+  gameStarted: boolean;
+  connectedPlayerIds: string[];
+  /** De dónde salió la partida: memoria del proceso o fila de SQLite. */
+  recoveredFrom: "memory" | "database";
+  persisted: boolean;
+}
+
+export interface ResumeFailedPayload {
+  message: string;
+  code: ResumeErrorCode;
+}
+
+export interface PlayerDisconnectedPayload {
+  playerId: string;
+  graceMs: number;
+}
+
+export interface PlayerReconnectedPayload {
+  playerId: string;
+  name: string;
+  players: Player[];
+  connectedPlayerIds: string[];
+}
+
+export interface PlayerLeftPayload {
+  player: Player;
+  players: Player[];
+  explicit: boolean;
+}
+
+export interface RoundStartedPayload {
+  roomId: string;
+  roundNumber: number;
 }
 
 export interface GameFinishedPayload {

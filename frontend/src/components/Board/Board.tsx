@@ -99,20 +99,29 @@ function dropHandlers(
 function toResolvedFrame(
   width: number,
   height: number,
-  hasTiles: boolean
+  hasTiles: boolean,
+  /**
+   * Centro de la cadena en unidades de rejilla en el momento en que se dibuja
+   * por primera vez. Sirve para colocar esa cadena centrada en la mesa: al
+   * jugarse en vivo la cadena nace de la primera ficha y crece hacia los
+   * extremos, pero al abrir una partida a medias (por ejemplo al reconectar
+   * después de recargar) no hay historial que diga de qué lado crecía, y sin
+   * este centro la cadena entera quedaría colgando de un lado del tablero.
+   * Después se congela: las fichas ya colocadas nunca se mueven.
+   */
+  chainCenter: { x: number; y: number } | null
 ): Frame {
-  const originX = width / 2;
-  const originY = height / 2;
   if (!hasTiles) {
-    return { tileH: DEFAULT_TILE_H, originX, originY };
+    return { tileH: DEFAULT_TILE_H, originX: width / 2, originY: height / 2 };
   }
   const availW = Math.max(width - BOARD_PAD_X * 2, 1);
   const availH = Math.max(height - BOARD_PAD_Y * 2, 1);
   const fit = Math.min(availW / RESERVED_W_UNITS, availH / RESERVED_H_UNITS);
+  const tileH = Math.min(Math.max(fit, MIN_TILE_H), MAX_TILE_H);
   return {
-    tileH: Math.min(Math.max(fit, MIN_TILE_H), MAX_TILE_H),
-    originX,
-    originY,
+    tileH,
+    originX: width / 2 - (chainCenter?.x ?? 0) * tileH,
+    originY: height / 2 - (chainCenter?.y ?? 0) * tileH,
   };
 }
 
@@ -128,6 +137,14 @@ export function Board({
   const builderRef = useRef<ChainBuilder | null>(null);
   const processedRef = useRef<Tile[] | null>(null);
   const lastSideRef = useRef<Side | null>(null);
+  /**
+   * Marca que en este render la cadena se ha construido desde cero. Solo en ese
+   * caso se recentra la mesa; si no, el marco congelado se respeta para que las
+   * fichas ya colocadas no cambien de sitio en cada jugada.
+   */
+  const coldBuildRef = useRef(false);
+  /** Centro de la cadena ya fijado, para que el marco no vuelva a desplazarse. */
+  const centerRef = useRef<{ x: number; y: number } | null>(null);
   const [frame, setFrame] = useState<Frame>({
     tileH: DEFAULT_TILE_H,
     originX: 0,
@@ -143,6 +160,7 @@ export function Board({
       builderRef.current = null;
       processedRef.current = null;
       lastSideRef.current = null;
+      coldBuildRef.current = true;
       return EMPTY_LAYOUT;
     }
 
@@ -151,6 +169,7 @@ export function Board({
         builderRef.current = createChain(tiles[0], DEFAULT_CONFIG);
         processedRef.current = [tiles[0]];
         lastSideRef.current = null;
+        coldBuildRef.current = true;
       }
     };
     ensureInit();
@@ -168,6 +187,7 @@ export function Board({
       builderRef.current = builder;
       processedRef.current = [tiles[0]];
       lastSideRef.current = null;
+      coldBuildRef.current = true;
       prevTiles = [tiles[0]];
       prevIds = new Set(prevTiles.map((t) => t.id));
       firstPrev = 0;
@@ -236,11 +256,30 @@ export function Board({
     const el = boardRef.current;
     if (!el) return;
 
+    // Solo si en este render la cadena se construyó desde cero se fija el centro
+    // de la mesa; después ese centro se conserva, de modo que las jugadas
+    // siguientes no mueven nada de lo ya colocado.
+    const coldBuild = coldBuildRef.current;
+    coldBuildRef.current = false;
+
     const measure = () => {
       const width = el.clientWidth;
       const height = el.clientHeight;
       if (width <= 0 || height <= 0) return;
-      const next = toResolvedFrame(width, height, tiles.length > 0);
+      if (tiles.length === 0) {
+        centerRef.current = null;
+      } else if (coldBuild) {
+        centerRef.current = {
+          x: (bounds.minX + bounds.maxX) / 2,
+          y: (bounds.minY + bounds.maxY) / 2,
+        };
+      }
+      const next = toResolvedFrame(
+        width,
+        height,
+        tiles.length > 0,
+        centerRef.current
+      );
       setFrame((prev) =>
         prev.tileH === next.tileH &&
           prev.originX === next.originX &&

@@ -17,6 +17,20 @@ export function emitJoinRoom(roomId: string, playerName: string): void {
   socket.emit("join_room", { roomId, playerName });
 }
 
+/**
+ * Reconexión: el cliente envía solo su identidad local y el backend decide.
+ * Responde con `room_resumed` + el estado completo, o con `resume_failed` si la
+ * partida ya no existe o el jugador dejó de pertenecer a ella.
+ */
+export function emitResumeSession(roomId: string, playerId: string): void {
+  socket.emit("resume_session", { roomId, playerId });
+}
+
+/** Abandono explícito: no espera la ventana de gracia del servidor. */
+export function emitLeaveGame(): void {
+  socket.emit("leave_game");
+}
+
 export function emitStartGame(): void {
   socket.emit("start_game");
 }

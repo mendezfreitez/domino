@@ -6,6 +6,7 @@ import {
   Player,
   PublicGameState,
   TILES_PER_PLAYER,
+  TEAM_COUNT,
   WinnerReason,
 } from "./game.types.js";
 
@@ -13,6 +14,16 @@ type BoardSide = "left" | "right";
 
 export interface DominoGameOptions {
   targetScore?: number;
+}
+
+/**
+ * Copia profunda del GameState. El estado solo contiene JSON (números, cadenas,
+ * listas y registros), por lo que `structuredClone` es suficiente y evita
+ * mantener a mano una función de clonado que se quedaría obsoleta en cuanto se
+ * añada un campo.
+ */
+function cloneState(state: GameState): GameState {
+  return structuredClone(state);
 }
 
 export class DominoGame {
@@ -29,6 +40,7 @@ export class DominoGame {
       players: sortedPlayers,
       hands: {},
       board: [],
+      bunk: [],
       currentPlayer: null,
       status: "waiting",
       winnerId: null,
@@ -41,7 +53,41 @@ export class DominoGame {
       matchWinnerTeam: null,
       targetScore: options?.targetScore ?? MATCH_TARGET_SCORE,
       readyForNextRound: [],
+      revision: 0,
     };
+  }
+
+  /**
+   * Reconstruye una partida a partir de un GameState persistido sin volver a
+   * repartir. Es la puerta de entrada de la recuperación: lo que sale de SQLite
+   * vuelve a ser un Game Engine normal, indistinguible de uno creado al vuelo.
+   */
+  static fromState(state: GameState): DominoGame {
+    const game = new DominoGame(state.roomId, state.players, {
+      targetScore: state.targetScore,
+    });
+    game.state = cloneState(state);
+    return game;
+  }
+
+  /**
+   * Copia profunda e independiente del estado actual. Sirve tanto para persistir
+   * (el JSON guardado no debe cambiar si el motor sigue mutando) como para
+   * deshacer una jugada cuando el guardado en SQLite falla.
+   */
+  snapshot(): GameState {
+    return cloneState(this.state);
+  }
+
+  /** Restaura un snapshot previo, dejando el motor como estaba antes. */
+  restore(snapshot: GameState): void {
+    this.state = cloneState(snapshot);
+  }
+
+  /** Avanza el contador de revisión. Se llama tras cada cambio de estado. */
+  bumpRevision(): number {
+    this.state.revision += 1;
+    return this.state.revision;
   }
 
   static createTiles(): DominoTile[] {
@@ -117,6 +163,7 @@ export class DominoGame {
     const tiles = DominoGame.shuffleTiles(DominoGame.createTiles());
     this.state.hands = DominoGame.dealTiles(tiles, this.state.players);
     this.state.board = [];
+    this.state.bunk = [];
 
     if (this.state.status === "waiting") {
       // Primera ronda: empieza quien tenga el doble-seis (o el primer asiento).
@@ -298,6 +345,35 @@ export class DominoGame {
     this.state.status = "finished";
   }
 
+  /**
+   * Da de baja a un jugador dentro del Game Engine: desaparece del estado
+   * persistido junto con su mano, de la lista de confirmados y de las
+   * referencias que lo señalaban como ganador, trancador o iniciador de ronda.
+   *
+   * Mantener la sala y el motor de acuerdo en el roster es lo que permite
+   * recuperar la partida desde SQLite sin resucitar al jugador que se fue.
+   */
+  removePlayer(playerId: string): boolean {
+    const index = this.state.players.findIndex((p) => p.id === playerId);
+    if (index === -1) return false;
+
+    this.state.players.splice(index, 1);
+    delete this.state.hands[playerId];
+    this.state.readyForNextRound = this.state.readyForNextRound.filter(
+      (id) => id !== playerId
+    );
+    if (this.state.currentPlayer === playerId) {
+      this.state.currentPlayer = this.state.players[0]?.id ?? null;
+    }
+    if (this.state.currentStarterId === playerId) {
+      this.state.currentStarterId = this.state.players[0]?.id ?? null;
+    }
+    if (this.state.winnerId === playerId) this.state.winnerId = null;
+    if (this.state.blockedById === playerId) this.state.blockedById = null;
+    this.reassignPositions();
+    return true;
+  }
+
   getPublicState(playerId: string): PublicGameState {
     const handCounts: Record<string, number> = {};
     for (const player of this.state.players) {
@@ -335,6 +411,7 @@ export class DominoGame {
       mustPass: this.currentMustPass(),
       revealedHands,
       readyForNextRound: [...this.state.readyForNextRound],
+      revision: this.state.revision,
     };
   }
 
@@ -379,13 +456,27 @@ export class DominoGame {
   }
 
   private nextPlayerId(fromId: string): string {
-    const player = this.state.players.find((p) => p.id === fromId)!;
+    const player = this.state.players.find((p) => p.id === fromId);
     const count = this.state.players.length;
+    if (!player || count === 0) return "";
     // Los turnos avanzan en sentido antihorario alrededor de la mesa.
     const next = this.state.players[
       (player.position - 1 + count) % count
     ];
     return next.id;
+  }
+
+  /**
+   * Recalcula las posiciones (0..n) alternando equipos, igual que hace el
+   * RoomManager, para que la mesa siga siendo coherente tras una baja.
+   */
+  private reassignPositions(): void {
+    const counters: number[] = [];
+    for (const player of this.state.players) {
+      const index = counters[player.team] ?? 0;
+      player.position = player.team + index * TEAM_COUNT;
+      counters[player.team] = index + 1;
+    }
   }
 
   private handPips(playerId: string): number {

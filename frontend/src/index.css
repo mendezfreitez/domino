@@ -97,3 +97,27 @@ input[type="text"]:focus {
   padding: 0.6rem 0.9rem;
   font-size: 0.95rem;
 }
+
+/* Aviso de conexión. Va fijo y por encima porque la mesa de juego ocupa toda la
+   pantalla: empujarla hacia abajo la encogería. */
+.status-banner {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  max-width: min(88vw, 520px);
+  background: var(--bg-panel);
+  border-color: var(--border);
+  color: var(--text-dim);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.waiting-text {
+  margin: auto;
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  padding: 2rem;
+  text-align: center;
+}

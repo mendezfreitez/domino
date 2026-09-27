@@ -10,7 +10,10 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "tsx src/game/DominoGame.test.ts",
-    "test:integration": "tsx src/socket/socketIntegration.test.ts"
+    "test:persistence": "tsx src/persistence/persistence.test.ts",
+    "test:integration": "tsx src/socket/socketIntegration.test.ts",
+    "test:reconnect": "tsx src/socket/persistenceIntegration.test.ts",
+    "test:all": "npm run test && npm run test:persistence && npm run test:integration && npm run test:reconnect"
   },
   "dependencies": {
     "socket.io": "^4.8.1"
