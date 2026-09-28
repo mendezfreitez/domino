@@ -7,6 +7,25 @@
   justify-content: center;
 }
 
+/* Móvil en vertical: la mesa entera se rota 90° por CSS para que se vea en
+   horizontal sin que el jugador tenga que girar el teléfono. El contenedor
+   intercambia dimensiones (ancho = alto del viewport) y gira sobre su esquina
+   superior izquierda; el `rotate(90deg) translateY(-100dvw)` recoloca el bloque
+   para que cubra la pantalla vertical por completo. Portada y sala no reciben
+   esta clase (vive solo en la mesa), y si el teléfono se gira físicamente la
+   media query deja de cumplirse y la clase desaparece: se juega nativo.
+   `dvh/dvw` hacen que el wrapper siga a la barra del navegador; las cajas
+   safe-area del teléfono en vertical (muesca arriba, barra táctil abajo) caen
+   sobre los lados izquierdo/derecho del layout horizontal girado. */
+.game-viewport.game-rotated {
+  width: 100dvh;
+  height: 100dvw;
+  transform-origin: top left;
+  transform: rotate(90deg) translateY(-100dvw);
+  padding-left: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-bottom, 0px);
+}
+
 .game-stage {
   width: 100%;
   height: 1080px;
@@ -299,6 +318,9 @@ body.domino-dragging {
   cursor: grabbing;
   user-select: none;
   -webkit-user-select: none;
+  /* Mientras se arrastra con el dedo, ningún gesto del navegador (scroll/pan)
+     puede robar el puntero: sin esto el `pointercancel` soltaría la ficha. */
+  touch-action: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

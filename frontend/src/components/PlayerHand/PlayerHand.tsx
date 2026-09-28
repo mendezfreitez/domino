@@ -1,4 +1,4 @@
-import type { MouseEvent } from "react";
+import type { PointerEvent } from "react";
 import type { DominoTile as Tile } from "../../types/Domino";
 import { DominoTile } from "../DominoTile/DominoTile";
 import "./PlayerHand.css";
@@ -8,7 +8,7 @@ interface PlayerHandProps {
   draggingTileId: string | null;
   isYourTurn: boolean;
   playableIds: Set<string>;
-  onTileMouseDown: (tileId: string, event: MouseEvent<HTMLElement>) => void;
+  onTilePointerDown: (tileId: string, event: PointerEvent<HTMLElement>) => void;
 }
 
 export function PlayerHand({
@@ -16,7 +16,7 @@ export function PlayerHand({
   draggingTileId,
   isYourTurn,
   // playableIds,
-  onTileMouseDown,
+  onTilePointerDown,
 }: PlayerHandProps) {
   return (
     <div className={`player-hand ${isYourTurn ? "tuTurno" : ""}`}>
@@ -33,8 +33,8 @@ export function PlayerHand({
             playable={playable}
             disabled={!playable && isYourTurn}
             className={isDragging ? "tile-dragging" : undefined}
-            onMouseDown={
-              playable ? (event) => onTileMouseDown(tile.id, event) : undefined
+            onPointerDown={
+              playable ? (event) => onTilePointerDown(tile.id, event) : undefined
             }
           />
         );

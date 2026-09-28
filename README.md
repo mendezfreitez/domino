@@ -89,6 +89,25 @@ netsh advfirewall firewall add rule name="Domino Frontend LAN (5173)" dir=in act
 
 Para forzar otra URL de servidor, define `VITE_SERVER_URL` (ej. `http://192.168.100.20:3001`) antes de `npm run dev`.
 
+## Jugar en un móvil
+
+No hace falta girar el teléfono: al entrar a la mesa desde un móvil en vertical
+(pantalla táctil apuntando en modo retrato) la página se **rota sola 90°** por
+CSS y el juego se ve en horizontal, ocupando toda la pantalla. Portada y sala se
+siguen viendo en vertical; la rotación vive solo en la mesa.
+
+- En la mesa en vertical el juego se muestra en horizontal automáticamente
+  (`.game-viewport.game-rotated`), sin pedirle nada al jugador.
+- Si se gira el teléfono físicamente, la mesa pasa a verse nativa en landscape;
+  al volver a vertical se vuelve a rotar sola. En ninguno de los dos cambios el
+  tablero se reordena: es la misma partida, ficha a ficha.
+- Las fichas se arrastran con el dedo (Pointer Events). `touch-action: none`
+  en las fichas de la mano impide que el navegador robe el gesto con el scroll.
+- El tablero usa fichas de tamaño de escritorio con desplazamiento que sigue la
+  última jugada: al crecer la cadena, la vista sigue el extremo jugado.
+- El giro se decide con la media query `(orientation: portrait) and (pointer: coarse)`:
+  las tablets en vertical también se rotan; un portátil con ratón nunca.
+
 ## Reglas implementadas
 
 - Conjunto estándar de 28 fichas `[0|0]` … `[6|6]`, sin duplicados (la ficha `[2|5]` y `[5|2]` son la misma).

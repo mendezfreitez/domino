@@ -21,6 +21,13 @@
   align-items: flex-start;
 }
 
+.player-hand .domino-tile {
+  /* El arrastre con el dedo (Pointer Events) necesita que el navegador no se
+     lleve el gesto: sin `touch-action: none` el scroll/pan del viewport
+     dispara `pointercancel` y la ficha se suelta a mitad del gesto. */
+  touch-action: none;
+}
+
 .player-hand .tile-dragging {
   visibility: hidden;
   pointer-events: none;

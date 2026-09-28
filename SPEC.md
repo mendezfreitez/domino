@@ -1044,3 +1044,44 @@ round-over ──(start_next_round, cualquier jugador)──► playing         
   dentro del plazo, la partida continúa donde estaba. Si el plazo se agota, o si el
   jugador pulsa abandonar, entonces sí: la ronda pasa a `finished` con razón
   `player-left`, sin ofrecer "Siguiente ronda".
+
+---
+
+# 30. Móvil
+
+El juego debe poder jugarse desde un teléfono/tablet **sin pedirle al jugador
+que gire el dispositivo**: al entrar a la mesa con una pantalla táctil apuntando
+en vertical, la página se rota 90° por CSS y la partida se muestra en
+horizontal, ocupando toda la pantalla.
+
+```text
+¿(orientation: portrait) and (pointer: coarse)?
+   │
+   ├── sí ► .game-viewport.game-rotated: la mesa se ve en horizontal
+   │        (se escala contra las dimensiones horizontales efectivas)
+   └── no ► mesa nativa (escritorio o teléfono ya girado físicamente)
+```
+
+Criterios de aceptación:
+
+1. **Entrar y verla en horizontal**: en vertical, al montar la mesa aparece la
+   clase `game-rotated` y la partida cubre toda la pantalla en horizontal, sin
+   ninguna acción del jugador. Portada y sala se ven en vertical (el giro vive
+   solo en la mesa).
+2. **Jugar con el dedo**: las fichas de la mano se arrastran con Pointer
+   Events (no mouse); `touch-action: none` impide que el navegador robe el
+   gesto con el scroll. El suelto resuelve con `elementFromPoint`, que respeta
+   el transform/zoom de la mesa rotada.
+3. **Tablero legible con desplazamiento**: las fichas del tablero usan el
+   tamaño mínimo de escritorio (`MIN_TILE_H`, 42 px) y la vista sigue la última
+   jugada si la cadena no cabe.
+4. **Girar el teléfono no reordena nada**: al pasar de vertical (rotada) a
+   landscape físico (nativa), o viceversa, el tablero sigue siendo la misma
+   partida, ficha a ficha, con la misma mano y el mismo turno. El marco de la
+   mesa se conserva por ronda (ver «El tablero se dibuja siempre igual»).
+5. **El fantasma de arrastre se renderiza fuera del wrapper rotado** (portal a
+   `body`): un `position: fixed` hijo de un ancestro con `transform` dependería
+   del wrapper girado y sus coordenadas de pantalla se descuadrarían.
+6. **Escritorio intacto**: la mesa no se rota con ratón (`pointer: fine`); el
+   arrastre con ratón sigue usando el mismo camino de Pointer Events y las
+   invariantes de render de escritorio se mantienen.

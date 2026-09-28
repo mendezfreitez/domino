@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, MouseEvent } from "react";
+import type { CSSProperties, PointerEvent } from "react";
+import { createPortal } from "react-dom";
 import { Board } from "../../components/Board/Board";
 import { Player } from "../../components/Player/Player";
 import { PlayerHand } from "../../components/PlayerHand/PlayerHand";
@@ -24,6 +25,29 @@ function distanceToRect(
   const dx = Math.max(rect.left - x, 0, x - rect.right);
   const dy = Math.max(rect.top - y, 0, y - rect.bottom);
   return Math.hypot(dx, dy);
+}
+
+/**
+ * Modo "móvil en vertical": pantalla táctil (puntero grueso) apuntando en
+ * portrait. La mesa se rota 90° por CSS para verse en horizontal; portada y
+ * sala no se tocan (el hook vive solo en la mesa).
+ *
+ * Se usa `useLayoutEffect` para que la rotación esté aplicada antes del primer
+ * paint y no se vea ni un frame en vertical sin girar.
+ */
+function useRotatedMode(): boolean {
+  const [rotated, setRotated] = useState(false);
+  useLayoutEffect(() => {
+    const mql = window.matchMedia(
+      "(orientation: portrait) and (pointer: coarse)"
+    );
+    setRotated(mql.matches);
+    const onChange = (event: MediaQueryListEvent) =>
+      setRotated(event.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+  return rotated;
 }
 
 interface GameProps {
@@ -55,14 +79,19 @@ export function Game({
   const [showResult, setShowResult] = useState<boolean>(true);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState<number>(1);
+  const rotated = useRotatedMode();
 
   useLayoutEffect(() => {
     const recompute = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      // En modo rotado el viewport CSS sigue siendo vertical (390×844), pero la
+      // mesa se dibuja rotada: se escala contra las dimensiones EFECTIVAS en
+      // horizontal (844×390) para que ocupe la pantalla como corresponde.
+      const effW = rotated ? Math.max(w, h) : w;
+      const effH = rotated ? Math.min(w, h) : h;
       const next = Math.max(
-        Math.min(
-          window.innerWidth / DESIGN_WIDTH,
-          window.innerHeight / DESIGN_HEIGHT
-        ) * ZOOM,
+        Math.min(effW / DESIGN_WIDTH, effH / DESIGN_HEIGHT) * ZOOM,
         MIN_SCALE
       );
       setScale(next);
@@ -70,7 +99,7 @@ export function Game({
     recompute();
     window.addEventListener("resize", recompute);
     return () => window.removeEventListener("resize", recompute);
-  }, []);
+  }, [rotated]);
 
   const youId = state.yourPlayerId;
   const isYourTurn =
@@ -123,8 +152,11 @@ export function Game({
     onPlayTile(tileId, side);
   };
 
-  // Arrastre manual: mousedown inicia, mousemove mueve el fantasma y
-  // mouseup resuelve la ficha con elementFromPoint sobre [data-drop-side].
+  // Arrastre: pointerdown inicia en la ficha, pointermove mueve el fantasma y
+  // pointerup resuelve la ficha con elementFromPoint sobre [data-drop-side].
+  // Se usan Pointer Events (no mouse) para que el gesto funcione con el dedo;
+  // `touch-action: none` en las fichas de la mano impide que el navegador se
+  // lleve el gesto (sin eso, el scroll dispararía `pointercancel` a mitad).
   const latestDrag = useRef({
     tileId: null as string | null,
     yourHand: state.yourHand,
@@ -142,12 +174,12 @@ export function Game({
     if (!dragTileId) return;
     document.body.classList.add("domino-dragging");
 
-    const onMove = (event: globalThis.MouseEvent) => {
+    const onMove = (event: globalThis.PointerEvent) => {
       event.preventDefault();
       setDragGhost({ x: event.clientX, y: event.clientY });
     };
 
-    const onUp = (event: globalThis.MouseEvent) => {
+    const onUp = (event: globalThis.PointerEvent) => {
       const current = latestDrag.current;
       const tileId = current.tileId;
       const el = document.elementFromPoint(event.clientX, event.clientY);
@@ -211,20 +243,22 @@ export function Game({
       setDragGhost(null);
     };
 
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
     document.addEventListener("mouseleave", onLeave);
     return () => {
       document.body.classList.remove("domino-dragging");
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
       document.removeEventListener("mouseleave", onLeave);
     };
   }, [dragTileId]);
 
-  const handleTileMouseDown = (
+  const handleTilePointerDown = (
     tileId: string,
-    event: MouseEvent<HTMLElement>
+    event: PointerEvent<HTMLElement>
   ) => {
     if (event.button !== 0) return;
     if (state.status !== "playing" || !isYourTurn) return;
@@ -346,7 +380,7 @@ const estadoPartida = (state: any) => {
 
 
   return (
-    <div className="game-viewport">
+    <div className={`game-viewport${rotated ? " game-rotated" : ""}`}>
       <div
         className="game-stage"
         ref={stageRef}
@@ -531,7 +565,7 @@ const estadoPartida = (state: any) => {
               draggingTileId={dragTileId}
               isYourTurn={isYourTurn}
               playableIds={playableIds}
-              onTileMouseDown={handleTileMouseDown}
+              onTilePointerDown={handleTilePointerDown}
             />
           </section>
 
@@ -573,21 +607,30 @@ const estadoPartida = (state: any) => {
         </div>
       </div>
 
-      {dragTileId && dragTile && dragGhost && (
-        <div
-          className="drag-ghost"
-          style={
-            {
-              left: dragGhost.x,
-              top: dragGhost.y,
-              transform: `translate(-50%, -85%) scale(${scale})`,
-            } as CSSProperties
-          }
-          aria-hidden="true"
-        >
-          <DominoTile tile={dragTile} size="hand" orientation="vertical" />
-        </div>
-      )}
+      {dragTileId &&
+        dragTile &&
+        dragGhost &&
+        createPortal(
+          <div
+            className="drag-ghost"
+            style={
+              {
+                left: dragGhost.x,
+                top: dragGhost.y,
+                transform: `translate(-50%, -85%) scale(${scale})`,
+              } as CSSProperties
+            }
+            aria-hidden="true"
+          >
+            <DominoTile tile={dragTile} size="hand" orientation="vertical" />
+          </div>,
+          // El fantasma vive en `body` (portal), no dentro de la mesa: cuando
+          // la mesa está rotada por transform, un `position: fixed` hijo de un
+          // ancestro transformado pasa a depender del wrapper rotado y las
+          // coordenadas del puntero (de pantalla) se descuadran. Desde `body`
+          // (sin transformar) las coordenadas son directas.
+          document.body
+        )}
     </div>
   );
 }
