@@ -9,6 +9,12 @@ export interface PublicGameState {
   roomId: string;
   players: Player[];
   board: DominoTile[];
+  /**
+   * Ficha con la que empezó la ronda: el ancla de la cadena del tablero. El
+   * servidor la persiste para que, al recargar la página, las fichas vuelvan a
+   * la posición que tenían. `null` con el tablero vacío.
+   */
+  boardAnchorId: string | null;
   currentPlayer: string | null;
   status: GameStatus;
   winnerId: string | null;

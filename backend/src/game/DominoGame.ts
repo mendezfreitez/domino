@@ -40,6 +40,7 @@ export class DominoGame {
       players: sortedPlayers,
       hands: {},
       board: [],
+      boardAnchorId: null,
       bunk: [],
       currentPlayer: null,
       status: "waiting",
@@ -163,6 +164,7 @@ export class DominoGame {
     const tiles = DominoGame.shuffleTiles(DominoGame.createTiles());
     this.state.hands = DominoGame.dealTiles(tiles, this.state.players);
     this.state.board = [];
+    this.state.boardAnchorId = null;
     this.state.bunk = [];
 
     if (this.state.status === "waiting") {
@@ -255,6 +257,12 @@ export class DominoGame {
       this.state.board.unshift(oriented);
     } else {
       this.state.board.push(oriented);
+    }
+
+    if (this.state.board.length === 1) {
+      // La primera ficha de la ronda es el ancla de la cadena: queda fija en el
+      // centro geométrico del tablero mientras crece a ambos lados.
+      this.state.boardAnchorId = oriented.id;
     }
 
     this.state.hands[playerId] = hand.filter((t) => t.id !== tileId);
@@ -395,6 +403,7 @@ export class DominoGame {
       roomId: this.state.roomId,
       players: this.state.players,
       board: this.state.board,
+      boardAnchorId: this.state.boardAnchorId,
       currentPlayer: this.state.currentPlayer,
       status: this.state.status,
       winnerId: this.state.winnerId,

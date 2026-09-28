@@ -28,6 +28,15 @@ export interface GameState {
   hands: Record<string, DominoTile[]>;
   /** Fichas colocadas en el tablero, en orden de izquierda a derecha. */
   board: DominoTile[];
+  /**
+   * Ficha con la que empezó la ronda: el ancla de la cadena.
+   *
+   * El ancla no se mueve en toda la ronda; las demás fichas se añaden a sus dos
+   * extremos. Guardarlo es lo que permite reconstruir el tablero tal y como se
+   * veía al recargar la página: sin él, todo lo que está a su izquierda se
+   * recolocaría al rehidratar la partida. Es `null` con el tablero vacío.
+   */
+  boardAnchorId: string | null;
   /** Fichas del pozo. Vacío en esta variante (reparto exacto de 28 fichas). */
   bunk: DominoTile[];
   currentPlayer: string | null;
@@ -53,6 +62,8 @@ export interface PublicGameState {
   roomId: string;
   players: Player[];
   board: DominoTile[];
+  /** Ancla de la cadena; ver `GameState.boardAnchorId`. */
+  boardAnchorId: string | null;
   currentPlayer: string | null;
   status: GameStatus;
   winnerId: string | null;

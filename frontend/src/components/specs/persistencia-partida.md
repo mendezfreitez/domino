@@ -38,6 +38,8 @@ El estado persistido debe contener TODA la información necesaria para reconstru
 * Fichas del pozo
 * Fichas colocadas en el tablero
 * Estado y extremos actuales del tablero
+* La ficha que abrió la ronda actual (el ancla de la cadena), necesaria para
+  redibujar el tablero en el mismo orden y en las mismas posiciones
 * Turno actual
 * Puntaje de cada equipo
 * Ronda actual
@@ -46,6 +48,11 @@ El estado persistido debe contener TODA la información necesaria para reconstru
 * Cualquier otro estado necesario para reconstruir exactamente la partida actual
 
 El estado debe ser suficiente para que, después de reiniciar el backend, la partida pueda continuar desde exactamente el mismo punto.
+
+En particular, el estado no basta con que las fichas del tablero estén en orden:
+como se colocan a los dos extremos, hace falta también el ancla (la primera ficha
+de la ronda) para saber por qué lado fue cada una. Sin ella, al recargar la página
+el tablero se reconstruye reordenado aunque la partida sea exactamente la misma.
 
 ### Persistencia
 
@@ -192,7 +199,8 @@ Debe funcionar este escenario:
 11. El backend devuelve el estado correspondiente al jugador 2.
 12. El cliente reconstruye la partida.
 13. El jugador 2 ve exactamente el mismo tablero, turno, puntajes, jugadores y su mano que antes de recargar.
-14. La partida continúa normalmente.
+14. Las fichas del tablero siguen en el mismo sitio: recargar no reordena nada.
+15. La partida continúa normalmente.
 
 También debe funcionar si el backend se reinicia:
 

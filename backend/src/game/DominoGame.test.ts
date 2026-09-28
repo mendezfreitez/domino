@@ -118,6 +118,76 @@ assert(rLeft.valid === true, "jugada [3|4] a la izquierda es válida");
 assert(g4.state.board[0].left === 4 && g4.state.board[0].right === 3, "[3|4] rota a [4|3] al colocarse a la izquierda");
 assert(g4.boardLeft() === 4, "el extremo izquierdo queda en 4");
 
+console.log("--- Ancla de la cadena ---");
+
+// El ancla es la ficha con la que empezó la ronda: no se mueve mientras la
+// cadena crece a ambos lados. El cliente la necesita para redibujar el tablero
+// tal y como estaba al recargar la página.
+const ga = new DominoGame("TESTA", makePlayers());
+ga.start();
+assert(ga.state.boardAnchorId === null, "una partida recién empezada no tiene ancla");
+
+ga.state.currentPlayer = "p0";
+ga.state.hands = { p0: [tile("3-5"), tile("3-4"), tile("5-2")], p1: [], p2: [], p3: [] };
+const a1 = ga.playTile("p0", "3-5", "right");
+assert(a1.valid === true, "la primera ficha de la ronda se coloca");
+assert(ga.state.boardAnchorId === "3-5", "la primera ficha de la ronda es el ancla");
+
+const a2 = ga.playTile("p0", "3-4", "left");
+assert(a2.valid === true, "se puede jugar a la izquierda del ancla");
+assert(
+  ga.state.boardAnchorId === "3-5",
+  "el ancla no cambia al jugar a la izquierda"
+);
+assert(
+  ga.state.board.map((t) => t.id).join(",") === "3-4,3-5",
+  "la ficha jugada a la izquierda queda delante en el tablero"
+);
+assert(
+  ga.state.board[ga.state.board.length - 1].id === "3-5",
+  "el ancla sigue en la última posición: la cadena crece hacia la izquierda"
+);
+
+const a3 = ga.playTile("p0", "5-2", "right");
+assert(a3.valid === true, "se puede volver a jugar a la derecha del ancla");
+assert(
+  ga.state.boardAnchorId === "3-5",
+  "el ancla tampoco cambia al jugar a la derecha"
+);
+assert(
+  ga.state.board.map((t) => t.id).join(",") === "3-4,3-5,5-2",
+  "el tablero queda ordenado de izquierda a derecha"
+);
+
+const a4 = ga.playTile("p0", "no-en-mano", "right");
+assert(!a4.valid, "no se puede jugar una ficha que no está en la mano");
+assert(ga.state.boardAnchorId === "3-5", "una jugada rechazada no toca el ancla");
+
+console.log("--- El ancla se reinicia con la ronda ---");
+
+ga.finishWithWinner();
+ga.startNextRound();
+assert(ga.state.board.length === 0, "la ronda nueva empieza con el tablero vacío");
+assert(ga.state.boardAnchorId === null, "la ronda nueva empieza sin ancla");
+
+const starter = ga.state.currentPlayer!;
+const enMano = ga.state.hands[starter][0];
+const a5 = ga.playTile(starter, enMano.id, "right");
+assert(a5.valid, "la primera jugada de la ronda nueva es válida");
+if (a5.valid) {
+  assert(
+    ga.state.boardAnchorId === a5.played.id,
+    "la nueva ronda tiene su propio ancla"
+  );
+}
+
+console.log("--- El ancla viaja en el estado público ---");
+
+assert(
+  ga.getPublicState(starter).boardAnchorId === ga.state.boardAnchorId,
+  "el estado público expone el ancla para que el tablero se redibuje igual"
+);
+
 console.log("--- Cambio de turno ---");
 
 const g5 = new DominoGame("TEST5", makePlayers());

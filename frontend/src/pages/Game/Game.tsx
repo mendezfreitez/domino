@@ -403,6 +403,7 @@ const estadoPartida = (state: any) => {
             <main className="game-board-center">
               <Board
                 tiles={state.board}
+                anchorId={state.boardAnchorId}
                 dragTileId={dragTileId}
                 dropLeftValid={dropLeftValid}
                 dropRightValid={dropRightValid}

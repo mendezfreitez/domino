@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DominoGame } from "../game/DominoGame.js";
 import { GameState, MATCH_TARGET_SCORE, Player } from "../game/game.types.js";
+import { Database } from "./Database.js";
 import { GameRepository } from "./GameRepository.js";
 import {
   CorruptGameStateError,
@@ -92,6 +93,31 @@ const dbPath = join(tempDir, "test.db");
 /** Repositorios abiertos, para liberarlos antes de borrar el temporal. */
 const opened: GameRepository[] = [];
 
+/**
+ * Reescribe el estado guardado de una sala por debajo del repositorio, como si
+ * alguien manipulase la fila a mano. Sirve para comprobar que lo corrupto se
+ * detecta al leer (y no al guardar), que es cuando ya no hay nada que hacer.
+ */
+function tamperState(
+  roomId: string,
+  mutate: (raw: Record<string, unknown>) => void
+): void {
+  const database = new Database({ path: dbPath });
+  try {
+    const row = database.raw
+      .prepare("SELECT state_json FROM games WHERE room_id = ?")
+      .get(roomId) as { state_json: string } | undefined;
+    if (!row) throw new Error(`la sala ${roomId} no existe`);
+    const raw = JSON.parse(row.state_json) as Record<string, unknown>;
+    mutate(raw);
+    database.raw
+      .prepare("UPDATE games SET state_json = ? WHERE room_id = ?")
+      .run(JSON.stringify(raw), roomId);
+  } finally {
+    database.close();
+  }
+}
+
 try {
   console.log("--- Serialización del estado ---");
 
@@ -114,6 +140,14 @@ try {
     restored.board.map((t) => t.id).join(",") ===
       state.board.map((t) => t.id).join(","),
     "se recupera el tablero con el mismo orden"
+  );
+  assert(
+    state.board.length > 0 && state.boardAnchorId !== null,
+    "la partida de prueba tiene tablero y ancla"
+  );
+  assert(
+    restored.boardAnchorId === state.boardAnchorId,
+    `se recupera el ancla de la cadena (${state.boardAnchorId})`
   );
   assert(
     restored.currentPlayer === state.currentPlayer,
@@ -373,6 +407,93 @@ try {
     () => fresh.getGame("ZZZZZ"),
     (e) => e instanceof CorruptGameStateError,
     "un estado guardado con otro roomId se detecta al leer"
+  );
+
+  console.log("--- El ancla de la cadena sobrevive a la persistencia ---");
+
+  // El ancla es lo que permite redibujar el tablero igual al recargar la
+  // página: sin ella, las fichas colocadas a la izquierda se recolocan.
+  fresh.createGame({
+    roomId: "ANCLA",
+    hostId: "p0",
+    roomStatus: "playing",
+    state: { ...state, roomId: "ANCLA" },
+  });
+  const conAncla = fresh.getGame("ANCLA");
+  assert(
+    conAncla !== null && conAncla.state.boardAnchorId === state.boardAnchorId,
+    `el ancla guardada se recupera íntegra (${state.boardAnchorId})`
+  );
+  assert(
+    conAncla !== null &&
+      conAncla.state.board.some((t) => t.id === conAncla.state.boardAnchorId),
+    "el ancla es una ficha del tablero: la que fija la cadena al redibujarla"
+  );
+
+  console.log("--- El ancla se valida al leer ---");
+
+  // Un ancla que no está en el tablero es estado manipulado, no una partida.
+  tamperState("ANCLA", (raw) => {
+    raw.boardAnchorId = "no-existe";
+  });
+  assertThrows(
+    () => fresh.getGame("ANCLA"),
+    (e) => e instanceof CorruptGameStateError,
+    "un ancla que no es una ficha del tablero se detecta al leer"
+  );
+
+  tamperState("ANCLA", (raw) => {
+    raw.boardAnchorId = 42;
+  });
+  assertThrows(
+    () => fresh.getGame("ANCLA"),
+    (e) => e instanceof CorruptGameStateError,
+    "un ancla que no es texto se detecta al leer"
+  );
+
+  // Y un tablero vacío no puede tener ancla.
+  tamperState("ANCLA", (raw) => {
+    raw.board = [];
+  });
+  assertThrows(
+    () => fresh.getGame("ANCLA"),
+    (e) => e instanceof CorruptGameStateError,
+    "un tablero vacío con ancla se detecta al leer"
+  );
+
+  console.log("--- Un registro antiguo sin ancla sigue siendo jugable ---");
+
+  // Las partidas guardadas antes de existir el campo deben cargarse: se asume el
+  // ancla en la primera ficha, que es lo que se hacía por defecto.
+  const legacy = JSON.parse(serializeGameState(state)) as Record<string, unknown>;
+  delete legacy.boardAnchorId;
+  const desdeRegistroAntiguo = deserializeGameState(
+    "ABCDE",
+    JSON.stringify(legacy)
+  );
+  assert(
+    state.board.length > 0 &&
+      desdeRegistroAntiguo.boardAnchorId === state.board[0].id,
+    `sin ancla guardada se asume la primera ficha del tablero (${state.board[0].id})`
+  );
+  assert(
+    desdeRegistroAntiguo.board.map((t) => t.id).join(",") ===
+      state.board.map((t) => t.id).join(","),
+    "el tablero del registro antiguo se recupera completo"
+  );
+  assert(
+    desdeRegistroAntiguo.hands.p2.map((t) => t.id).join(",") ===
+      state.hands.p2.map((t) => t.id).join(","),
+    "las manos del registro antiguo se recuperan intactas"
+  );
+
+  const sinFichas = deserializeGameState(
+    "ABCDE",
+    JSON.stringify({ ...legacy, board: [] })
+  );
+  assert(
+    sinFichas.boardAnchorId === null,
+    "un registro antiguo sin fichas no inventa ancla"
   );
 
   console.log("--- Persistencia no disponible ---");

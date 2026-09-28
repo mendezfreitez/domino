@@ -566,8 +566,42 @@ export function createChain(
   return builder;
 }
 
-export function buildChainLayout(
-  tiles: DominoTile[],
+/**
+ * Reconstruye la cadena de un tablero completo, con el ancla en el índice dado.
+ *
+ * `tiles` viene ordenado de izquierda a derecha, así que la reproducción es
+ * directa: desde el ancla, el brazo derecho hacia fuera y el brazo izquierdo
+ * hacia dentro. El resultado es idéntico al que se obtiene jugando ficha a
+ * ficha, porque `placeTile` se llama en el mismo orden y con los mismos lados.
+ */
+export function replayChain(
+  tiles: readonly DominoTile[],
+  anchorIndex: number,
+  config: BoardConfig = DEFAULT_CONFIG
+): ChainBuilder {
+  const index = clamp(anchorIndex, 0, Math.max(tiles.length - 1, 0));
+  const builder = createChain(tiles[index], config);
+  for (let i = index + 1; i < tiles.length; i++) {
+    placeTile(tiles[i], "right", builder, config);
+  }
+  for (let i = index - 1; i >= 0; i--) {
+    placeTile(tiles[i], "left", builder, config);
+  }
+  return builder;
+}
+
+/**
+ * Igual que `replayChain`, pero devuelve el layout ya calculado, listo para
+ * dibujar. Se usa al abrir una partida a medias: el servidor envía el tablero
+ * junto con el ancla de la cadena, y con ella cada ficha vuelve a la posición
+ * que tenía cuando se recargó la página.
+ *
+ * Si el ancla no está en el tablero (registro antiguo que no lo guardaba), se
+ * usa la primera ficha y todo crece hacia la derecha.
+ */
+export function replayBoardLayout(
+  tiles: readonly DominoTile[],
+  anchorId: string | null,
   config: BoardConfig = DEFAULT_CONFIG
 ): ChainLayout {
   if (tiles.length === 0) {
@@ -581,16 +615,19 @@ export function buildChainLayout(
       rightEnd: null,
     };
   }
+  const found = findAnchorIndex(tiles, anchorId);
+  return builderToLayout(replayChain(tiles, found < 0 ? 0 : found, config));
+}
 
-  const anchorIndex = Math.floor((tiles.length - 1) / 2);
-  const builder = createChain(tiles[anchorIndex], config);
+/** Índice del ancla dentro de un tablero ordenado, o -1 si no está. */
+export function findAnchorIndex(
+  tiles: readonly DominoTile[],
+  anchorId: string | null
+): number {
+  if (anchorId === null) return -1;
+  return tiles.findIndex((t) => t.id === anchorId);
+}
 
-  for (let i = 1; i < tiles.length; i++) {
-    const rightIdx = anchorIndex + i;
-    const leftIdx = anchorIndex - i;
-    if (rightIdx < tiles.length) placeTile(tiles[rightIdx], "right", builder, config);
-    if (leftIdx >= 0) placeTile(tiles[leftIdx], "left", builder, config);
-  }
-
-  return builderToLayout(builder);
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }

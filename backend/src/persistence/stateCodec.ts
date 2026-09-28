@@ -242,6 +242,26 @@ export function deserializeGameState(roomId: string, json: string): GameState {
   const board = parseTiles(roomId, raw.board ?? [], "board");
   if (board.length > MAX_TILES) fail(roomId, "el tablero es demasiado grande.");
 
+  // El ancla de la cadena solo sirve si es una ficha que está en el tablero: es
+  // la que permite reconstruir la geometría al reconectar. En un registro
+  // antiguo, donde el campo aún no existía, se asume la primera ficha, que es lo
+  // que se hacía antes de guardarlo (cadena válida, aunque recolocada).
+  let boardAnchorId: string | null;
+  if (raw.boardAnchorId === undefined || raw.boardAnchorId === null) {
+    boardAnchorId = board.length > 0 ? board[0].id : null;
+  } else {
+    boardAnchorId = asString(roomId, raw.boardAnchorId, "boardAnchorId");
+    if (!board.some((tile) => tile.id === boardAnchorId)) {
+      fail(
+        roomId,
+        `boardAnchorId (${boardAnchorId}) no es una ficha del tablero.`
+      );
+    }
+  }
+  if (board.length === 0 && boardAnchorId !== null) {
+    fail(roomId, "el tablero está vacío pero tiene ancla.");
+  }
+
   const currentPlayer = asNullableString(
     roomId,
     raw.currentPlayer,
@@ -334,6 +354,7 @@ export function deserializeGameState(roomId: string, json: string): GameState {
     players,
     hands,
     board,
+    boardAnchorId,
     bunk,
     currentPlayer,
     status,

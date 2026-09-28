@@ -5,8 +5,10 @@ import { DominoTile } from "../DominoTile/DominoTile";
 import {
   builderToLayout,
   createChain,
-  predictNextPlacement,
+  findAnchorIndex,
   placeTile,
+  predictNextPlacement,
+  replayChain,
   DEFAULT_CONFIG,
 } from "./dominoLayout";
 import type { ChainBuilder, ChainLayout, Side } from "./dominoLayout";
@@ -61,8 +63,46 @@ interface Frame {
   originY: number;
 }
 
+/**
+ * Centro de la cadena tal y como estaba cuando empezó la ronda: solo la ficha
+ * ancla y las dos zonas de colocación, nada más.
+ *
+ * El marco se congela con ESE centro, no con el centro que tenga el tablero en
+ * el momento de dibujarlo. La diferencia importa: en vivo el marco se fija al
+ * abrir la ronda y la cadena crece alrededor del ancla; si al abrir una partida
+ * a medias se centrara la cadena actual, el tablero entero se desplazaría
+ * respecto de lo que ve el resto de la mesa. Como el ancla no se mueve en toda
+ * la ronda, su centro de inicio siempre se puede volver a calcular, y el marco
+ * sale idéntico al que ya tenían los demás.
+ */
+function roundStartCenter(anchor: Tile): { x: number; y: number } {
+  const layout = builderToLayout(createChain(anchor, DEFAULT_CONFIG));
+  let minX = layout.minX;
+  let maxX = layout.maxX;
+  let minY = layout.minY;
+  let maxY = layout.maxY;
+  for (const side of ["left", "right"] as const) {
+    const zone = predictNextPlacement(side, layout, DEFAULT_CONFIG);
+    if (!zone) continue;
+    minX = Math.min(minX, zone.x - 1);
+    maxX = Math.max(maxX, zone.x + 1);
+    minY = Math.min(minY, zone.y - 1);
+    maxY = Math.max(maxY, zone.y + 1);
+  }
+  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+}
+
 interface BoardProps {
   tiles: Tile[];
+  /**
+   * Ficha con la que empezó la ronda, tal y como la persiste el servidor.
+   *
+   * Es lo que permite que un tablero abierto a medias (página recargada,
+   * reconexión o backend reiniciado) se dibuje exactamente igual que antes: sin
+   * el ancla, la cadena se re-anclaría en su extremo izquierdo y todas las
+   * fichas colocadas a la izquierda se recolocarían.
+   */
+  anchorId: string | null;
   dragTileId: string | null;
   dropLeftValid: boolean;
   dropRightValid: boolean;
@@ -127,6 +167,7 @@ function toResolvedFrame(
 
 export function Board({
   tiles,
+  anchorId,
   dragTileId,
   dropLeftValid,
   dropRightValid,
@@ -143,6 +184,8 @@ export function Board({
    * fichas ya colocadas no cambien de sitio en cada jugada.
    */
   const coldBuildRef = useRef(false);
+  /** Centro de la cadena al empezar la ronda; ver `roundStartCenter`. */
+  const roundCenterRef = useRef<{ x: number; y: number } | null>(null);
   /** Centro de la cadena ya fijado, para que el marco no vuelva a desplazarse. */
   const centerRef = useRef<{ x: number; y: number } | null>(null);
   const [frame, setFrame] = useState<Frame>({
@@ -164,33 +207,40 @@ export function Board({
       return EMPTY_LAYOUT;
     }
 
-    const ensureInit = () => {
-      if (builderRef.current === null || processedRef.current === null) {
-        builderRef.current = createChain(tiles[0], DEFAULT_CONFIG);
-        processedRef.current = [tiles[0]];
-        lastSideRef.current = null;
-        coldBuildRef.current = true;
-      }
+    // Arranque en frío: la partida se abre a medias y no hay historial de
+    // jugadas, así que se reproduce la cadena entera desde el ancla que
+    // persistió el servidor. `placeTile` se llama en el mismo orden y con los
+    // mismos lados que en vivo, así que cada ficha cae en su sitio.
+    const rebuild = (): ChainBuilder => {
+      const anchor = findAnchorIndex(tiles, anchorId);
+      const builder = replayChain(tiles, Math.max(anchor, 0), DEFAULT_CONFIG);
+      builderRef.current = builder;
+      processedRef.current = tiles.slice();
+      // La última jugada fue por el extremo contrario al ancla: se deja la
+      // vista apuntando ahí, que es donde el jugador quiere seguir jugando.
+      lastSideRef.current = anchor >= 0 && anchor < tiles.length - 1 ? "right" : "left";
+      // El marco se congela con el centro que tenía la cadena al empezar la
+      // ronda, no con el de ahora: así el tablero se dibuja en el mismo sitio
+      // que en el de los que no recargaron. Sin ancla conocida (registro muy
+      // antiguo) no se puede saber, y se usa el centro actual.
+      roundCenterRef.current = anchor >= 0 ? roundStartCenter(tiles[anchor]) : null;
+      coldBuildRef.current = true;
+      return builder;
     };
-    ensureInit();
 
-    // Tras ensureInit, ambas referencias están garantizadas no-nulas.
-    let builder = builderRef.current!;
-    let prevTiles: Tile[] = processedRef.current!;
+    if (builderRef.current === null || processedRef.current === null) {
+      return builderToLayout(rebuild());
+    }
+
+    let builder = builderRef.current;
+    let prevTiles: Tile[] = processedRef.current;
     let prevIds = new Set(prevTiles.map((t) => t.id));
     let firstPrev = tiles.findIndex((t) => prevIds.has(t.id));
     if (firstPrev === -1) {
       // No coincide la cadena interior con el tablero recibido (reinicio
-      // anómalo, p. ej. carga a mitad de partida): reconstruir la cadena desde
-      // la primera ficha recibida, que queda como ancla fija.
-      builder = createChain(tiles[0], DEFAULT_CONFIG);
-      builderRef.current = builder;
-      processedRef.current = [tiles[0]];
-      lastSideRef.current = null;
-      coldBuildRef.current = true;
-      prevTiles = [tiles[0]];
-      prevIds = new Set(prevTiles.map((t) => t.id));
-      firstPrev = 0;
+      // anómalo, p. ej. carga a mitad de partida): reconstruir desde el ancla
+      // guardado, no desde la primera ficha recibida.
+      return builderToLayout(rebuild());
     }
 
     const leftAdds = firstPrev > 0 ? tiles.slice(0, firstPrev) : [];
@@ -218,7 +268,7 @@ export function Board({
 
     processedRef.current = tiles.slice();
     return builderToLayout(builder);
-  }, [tiles]);
+  }, [tiles, anchorId]);
 
   const leftZone = useMemo(
     () => predictNextPlacement("left", layout, DEFAULT_CONFIG),
@@ -268,11 +318,16 @@ export function Board({
       if (width <= 0 || height <= 0) return;
       if (tiles.length === 0) {
         centerRef.current = null;
+        roundCenterRef.current = null;
       } else if (coldBuild) {
-        centerRef.current = {
-          x: (bounds.minX + bounds.maxX) / 2,
-          y: (bounds.minY + bounds.maxY) / 2,
-        };
+        // Se congela el marco con el centro de inicio de la ronda, que es el
+        // mismo que se usó en vivo; si no se conoce (registro antiguo sin ancla)
+        // se cae al centro de la cadena actual, que al menos la deja centrada.
+        centerRef.current =
+          roundCenterRef.current ?? {
+            x: (bounds.minX + bounds.maxX) / 2,
+            y: (bounds.minY + bounds.maxY) / 2,
+          };
       }
       const next = toResolvedFrame(
         width,

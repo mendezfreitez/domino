@@ -394,6 +394,7 @@ export class RoomManager {
           players,
           hands: {},
           board: [],
+          boardAnchorId: null,
           bunk: [],
           currentPlayer: null,
           status: "waiting" as const,

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { Socket as ClientSocket, io as ioc } from "socket.io-client";
 import { Server } from "socket.io";
-import { GameStateForPlayer } from "../game/game.types.js";
+import type { DominoTile, GameStateForPlayer } from "../game/game.types.js";
 import { GameRepository } from "../persistence/GameRepository.js";
 import { RoomManager } from "../rooms/RoomManager.js";
 import { registerSocketHandlers } from "./socketHandlers.js";
@@ -79,27 +79,44 @@ interface TestClient {
   state: GameStateForPlayer | null;
 }
 
-function pickPlayable(state: GameStateForPlayer): string | null {
+/**
+ * Elige una ficha jugable de la mano. Si se pide un extremo y hay ficha para él,
+ * se juega en ese lado: así la cadena crece hacia los dos extremos y el ancla no
+ * queda siempre pegada al borde izquierdo del tablero, que es el caso donde el
+ * tablero se recolocaría al recargar sin el ancla.
+ */
+function pickPlayable(
+  state: GameStateForPlayer,
+  preferSide?: "left" | "right"
+): { tileId: string; side?: "left" | "right" } | null {
   const hand = state.yourHand;
   if (hand.length === 0) return null;
-  if (state.board.length === 0) return hand[0].id;
+  if (state.board.length === 0) return { tileId: hand[0].id };
+
   const left = state.board[0].left;
   const right = state.board[state.board.length - 1].right;
-  return (
-    hand.find(
-      (t) =>
-        t.left === left ||
-        t.right === left ||
-        t.left === right ||
-        t.right === right
-    )?.id ?? null
-  );
+  const matches = (tile: DominoTile, value: number): boolean =>
+    tile.left === value || tile.right === value;
+
+  const playable = hand.filter((t) => matches(t, left) || matches(t, right));
+  if (playable.length === 0) return null;
+
+  if (preferSide) {
+    const preferred = playable.find((t) =>
+      matches(t, preferSide === "left" ? left : right)
+    );
+    if (preferred) return { tileId: preferred.id, side: preferSide };
+  }
+  return { tileId: playable[0].id };
 }
 
 /** Instantánea comparable del estado que ve un jugador. */
 function snapshotForPlayer(state: GameStateForPlayer): string {
   return JSON.stringify({
     board: state.board,
+    // El ancla forma parte de lo que el cliente necesita para redibujar el
+    // tablero igual que antes de recargar: si se pierde, las fichas se recolocan.
+    boardAnchorId: state.boardAnchorId,
     currentPlayer: state.currentPlayer,
     status: state.status,
     yourHand: state.yourHand,
@@ -240,8 +257,10 @@ async function main(): Promise<void> {
       const mover = sessions.find((s) => s.state?.currentPlayer === s.playerId);
       if (!mover?.state) break;
       const boardLen = mover.state.board.length;
-      const tileId = pickPlayable(mover.state);
-      if (!tileId) {
+      // Alternando el extremo, la ronda deja las fichas repartidas a ambos lados
+      // del ancla, que es la situación que un tablero rehidratado debe respectar.
+      const jugada = pickPlayable(mover.state, moves % 2 === 0 ? "left" : "right");
+      if (!jugada) {
         // Turno sin fichas jugables: pasar también es avanzar la partida.
         const holder = mover.state.currentPlayer;
         mover.client.emit("pass_turn");
@@ -251,7 +270,7 @@ async function main(): Promise<void> {
         await wait(60);
         continue;
       }
-      mover.client.emit("play_tile", { tileId });
+      mover.client.emit("play_tile", jugada);
       const ok = await waitFor(
         () => (mover.state?.board.length ?? 0) === boardLen + 1,
         3000
@@ -281,6 +300,16 @@ async function main(): Promise<void> {
         (s) => s.state!.board.map((t) => t.id).join(",") === boardBefore
       ),
       "los 4 jugadores ven el mismo tablero"
+    );
+    assert(
+      sessions.every((s) => s.state!.boardAnchorId === playersBefore.state!.boardAnchorId),
+      "los 4 jugadores reciben el mismo ancla de la cadena"
+    );
+    // Si el ancla quedara en el primer sitio del tablero, la cadena solo habría
+    // crecido hacia la derecha y esta prueba no comprobaría nada sobre el ancla.
+    assert(
+      playersBefore.state!.board[0].id !== playersBefore.state!.boardAnchorId,
+      "la ronda creció también hacia la izquierda del ancla"
     );
 
     // 7-8. El jugador 2 "recarga": se corta el socket y se abre uno nuevo.
@@ -339,6 +368,11 @@ async function main(): Promise<void> {
       "la mano del jugador 2 es idéntica a la de antes de recargar"
     );
     assert(after.currentPlayer === turnBefore, "el turno actual es el mismo");
+    assert(
+      after.boardAnchorId === playersBefore.state!.boardAnchorId &&
+        after.boardAnchorId !== null,
+      `el ancla de la cadena se entrega al reconectar (${after.boardAnchorId})`
+    );
     assert(after.teamScores.join("-") === scoresBefore, "el marcador es el mismo");
     assert(after.roundNumber === playersBefore.state!.roundNumber, "la ronda es la misma");
     assert(
@@ -374,8 +408,8 @@ async function main(): Promise<void> {
       const mover = all.find((s) => s.state?.currentPlayer === s.playerId);
       if (!mover?.state) break;
       const boardLen = mover.state.board.length;
-      const tileId = pickPlayable(mover.state);
-      if (!tileId) {
+      const jugada = pickPlayable(mover.state);
+      if (!jugada) {
         // Al que le toca puede no tener nada jugable: pasar el turno sigue siendo
         // jugar, así que la comprobación no puede depender de encontrar una
         // ficha placeable.
@@ -388,7 +422,7 @@ async function main(): Promise<void> {
         await wait(60);
         continue;
       }
-      mover.client.emit("play_tile", { tileId });
+      mover.client.emit("play_tile", jugada);
       const ok = await waitFor(
         () => (mover.state?.board.length ?? 0) === boardLen + 1,
         3000
@@ -415,6 +449,7 @@ async function main(): Promise<void> {
     assert(persistedBefore !== null, "la partida está guardada en SQLite");
     const revisionBefore = all[0].state!.revision;
     const boardAtRestart = all[0].state!.board.map((t) => t.id).join(",");
+    const anchorAtRestart = all[0].state!.boardAnchorId;
     const scoresAtRestart = all[0].state!.teamScores.join("-");
     const roundAtRestart = all[0].state!.roundNumber;
     const handAtRestart = all[1].state!.yourHand.map((t) => t.id).sort().join(",");
@@ -457,6 +492,15 @@ async function main(): Promise<void> {
     assert(
       afterRestartState.board.map((t) => t.id).join(",") === boardAtRestart,
       "el tablero es exactamente el que había antes del reinicio"
+    );
+    assert(
+      afterRestartState.boardAnchorId === anchorAtRestart &&
+        anchorAtRestart !== null,
+      `el ancla de la cadena sobrevive al reinicio (${anchorAtRestart})`
+    );
+    assert(
+      afterRestartState.board.some((t) => t.id === anchorAtRestart),
+      "el ancla sigue siendo una ficha del tablero recuperado"
     );
     assert(afterRestartState.currentPlayer === turnAtRestart, "el turno se conserva");
     assert(afterRestartState.teamScores.join("-") === scoresAtRestart, "el marcador se conserva");
@@ -502,12 +546,12 @@ async function main(): Promise<void> {
     const playableTile = turnState.current ? pickPlayable(turnState.current) : null;
     if (playableTile) {
       const boardBeforeMove = turnState.current!.board.length;
-      turnClient.emit("play_tile", { tileId: playableTile });
+      turnClient.emit("play_tile", playableTile);
       const applied = await waitFor(
         () => (turnState.current?.board.length ?? 0) === boardBeforeMove + 1,
         3000
       );
-      assert(applied, `el motor recuperado acepta la jugada siguiente (${playableTile})`);
+      assert(applied, `el motor recuperado acepta la jugada siguiente (${playableTile.tileId})`);
       assert(
         restarted.repository.getGame(room.roomId)!.state.board.length ===
           boardBeforeMove + 1,
@@ -770,7 +814,7 @@ async function main(): Promise<void> {
     const dMover = dClients.find((s) => s.state?.currentPlayer === s.playerId);
     const dTile = dMover?.state ? pickPlayable(dMover.state) : null;
     const dBefore = dMover?.state?.board.length ?? 0;
-    if (dTile) dMover!.client.emit("play_tile", { tileId: dTile });
+    if (dTile) dMover!.client.emit("play_tile", dTile);
     await wait(200);
     assert(
       (dMover?.state?.board.length ?? 0) === dBefore + 1,

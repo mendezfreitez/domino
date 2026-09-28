@@ -130,6 +130,25 @@ error: nunca se le confirma una jugada que el servidor no puede recuperar. Dos
 jugadas que llegan a la vez se serializan por sala (`RoomLocks`), de modo que la
 segunda ve el tablero que dejó la primera.
 
+## El tablero se dibuja siempre igual
+
+Las fichas se añaden a los dos extremos de la cadena, así que la lista ordenada
+que llega del servidor no dice por qué lado se colocó cada una. Para poder
+redibujarla tal cual, el estado incluye el **ancla** de la ronda
+(`boardAnchorId`): la ficha con la que empezó, que no se mueve en toda la ronda
+(se fija al abrirla y se reinicia con ella).
+
+Con el ancla, el cliente reproduce la cadena en el mismo orden y con los mismos
+lados con los que se jugó (`replayBoardLayout` en
+`frontend/src/components/Board/dominoLayout.ts`), de modo que cada ficha cae en
+su posición de rejilla. El marco de la mesa (escala y origen) se congela al abrir
+la ronda con el centro que tenía la cadena en ese momento, y al abrir una partida
+a medias se reconstruye ese mismo marco a partir del ancla, no uno nuevo centrado
+sobre el tablero actual.
+
+Resultado: recargar la página no reordena nada, y quien entra a una partida en
+curso ve el tablero en el mismo sitio que el resto de la mesa.
+
 ## Reconexión
 
 Al abrir la página, el cliente manda su identidad local y el backend decide qué
@@ -177,6 +196,7 @@ npm run typecheck
 
 ```bash
 cd frontend
+npm test                # Rejilla del tablero: colocación y reconstrucción
 npm run build           # tsc -b + vite build
 npm run typecheck
 ```

@@ -373,6 +373,7 @@ interface GameState {
     players: Player[];                    // id, nombre, posición y equipo
     hands: Record<string, DominoTile[]>;  // mano completa de cada jugador
     board: DominoTile[];                  // fichas colocadas, de izquierda a derecha
+    boardAnchorId: string | null;         // ficha con la que abrió la ronda (el ancla)
     bunk: DominoTile[];                   // fichas del pozo (vacío en esta variante)
     currentPlayer: string | null;
     status: "waiting" | "playing" | "round-over" | "finished";
@@ -410,6 +411,14 @@ Reglas sobre el estado:
   público derivado de él (mano propia, conteos de manos, tablero, turnos,
   marcador) más la información de sesión. Las manos de los demás nunca viajan al
   cliente (ver §20).
+* `board` es una cadena que crece por los dos extremos, así que por sí solo no
+  basta para redibujarla: una lista ordenada de izquierda a derecha no dice por
+  qué lado se colocó cada ficha. `boardAnchorId` guarda cuál fue la primera ficha
+  de la ronda y nunca cambia (se pone al abrir la ronda y se reinicia con ella):
+  con ese dato el cliente reproduce la cadena en el mismo orden y con los mismos
+  lados, y el tablero se ve igual aunque la partida se abra a medias (ver §21).
+  Un tablero no vacío siempre tiene ancla, y con el tablero vacío el ancla es
+  `null`.
 
 ---
 
@@ -459,7 +468,10 @@ Responsabilidades de esa capa:
 * abrir SQLite, crear el esquema y cerrarlo de forma ordenada;
 * serializar y validar el `GameState` completo al leer y al escribir, de forma
   que un estado corrupto se rechace con un error explícito en lugar de
-  devolver una partida imposible;
+  devolver una partida imposible; el ancla se valida como lo que es (un id de
+  texto que está en el tablero, y `null` solo si el tablero está vacío), y una
+  partida guardada antes de que existiera el campo se carga asumiendo el ancla
+  en la primera ficha, que es lo que se hacía por defecto;
 * reflejar la lista de jugadores para poder localizar la sala de un jugador;
 * degradar en modo memoria si la base de datos no está disponible, sin tumbar el
   servidor: la partida sigue siendo jugable y el cliente recibe un aviso de que
@@ -765,6 +777,28 @@ La representación visual puede evolucionar posteriormente.
 
 La primera versión debe priorizar que las fichas puedan jugarse correctamente sobre el tablero antes que tener una presentación gráfica avanzada.
 
+## El tablero se dibuja siempre igual
+
+Las fichas ya colocadas no pueden moverse bajo los pies del jugador, ni al crecer
+la cadena ni al recargar la página. Para poder garantizarlo hace falta que el
+estado que llega sea suficiente para reconstruir el tablero por completo, y eso
+incluye dos cosas:
+
+* **el ancla de la cadena** (`boardAnchorId`, §12): la ficha con la que empezó la
+  ronda. Las fichas se añaden a los dos extremos, así que la lista ordenada no
+  dice por qué lado fue cada una; desde el ancla, el cliente vuelve a colocar cada
+  ficha en el mismo orden y con el mismo lado con el que se jugó, y por tanto en la
+  misma posición de rejilla;
+* **el marco congelado por ronda**: la escala y el origen de la mesa se fijan al
+  abrir la ronda (con el centro que tenía la cadena en ese momento, que se vuelve
+  a calcular a partir del ancla) y ya no se recalculan al crecer el tablero. Al
+  abrir una partida a medias se reconstruye ese mismo marco, no uno nuevo centrado
+  sobre lo que haya ahora mismo, porque si no el tablero entero se desplazaría
+  respecto de lo que ven los demás jugadores.
+
+Con las dos cosas, la posición en pantalla de cada ficha es la misma antes y
+después de recargar, y los cuatro jugadores ven las fichas en el mismo sitio.
+
 ---
 
 # 22. Turnos
@@ -926,6 +960,7 @@ La primera versión estará terminada cuando cuatro navegadores/dispositivos pue
 Además, la partida debe sobrevivir tanto a recargar la página como a reiniciar el servidor:
 
 * el jugador que recarga vuelve a la misma partida con el mismo tablero, turno, marcador, jugadores y mano, y puede seguir jugando;
+* recargar no reordena el tablero: cada ficha conserva su posición en pantalla y las cuatro pantallas siguen mostrando las fichas en el mismo sitio;
 * lo mismo ocurre tras reiniciar el backend, porque el estado se recupera de SQLite;
 * una recarga o una pérdida de conexión no abandonan la partida: el jugador sigue en la mesa durante una ventana de gracia y los demás ven que está esperando;
 * el botón de abandonar sí es definitivo y no espera esa ventana;
