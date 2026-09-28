@@ -7,7 +7,7 @@
   padding: 7px;
   min-height: 130px;
   align-content: flex-start;
-  width: 24%;
+  width: 500px;
 }
 
 .player-hand.tuTurno, .player-card.current {
