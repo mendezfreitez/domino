@@ -71,9 +71,9 @@
 }
 
 .game-header-right {
-    gap: 0.2rem;
-    flex-direction: column;
-    display: flex;
+  gap: 0.2rem;
+  flex-direction: column;
+  display: flex;
 }
 
 .game-scoreboard {
@@ -411,6 +411,7 @@ body.domino-dragging {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
+  width: 600px;
 }
 
 .reveal-team-name {
