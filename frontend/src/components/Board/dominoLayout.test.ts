@@ -369,3 +369,68 @@ test("replayChain coloca el ancla donde se le pide", () => {
   assert.ok(derecha.x > 0, "la vecina derecha queda a la derecha");
   assert.equal(findAnchorIndex(fichas, "6-6"), 1);
 });
+
+/**
+ * El 2º cruce (reorientación) no debe sobresalir: cuando el antecedente es no
+ * doble, la ficha se coloca AL COSTADO del último tramo y una casilla hacia la
+ * línea principal respecto de su extremo libre, con contacto por la arista
+ * completa.
+ *
+ * Secuencia usada (todas al mismo lado): 7ª ficha = cruce, 8ª = recta del tramo
+ * (no doble, no retrasa), 9ª = la que se reorienta. El test compara la 9ª con la
+ * 8ª (su antecedente).
+ */
+function tileOf(id: string): DominoTile {
+  const [left, right] = id.split("-").map(Number);
+  return { id, left, right };
+}
+
+function assertNear(actual: number, expected: number, msg: string): void {
+  assert.ok(
+    Math.abs(actual - expected) < 1e-9,
+    `${msg} (${actual} vs ${expected})`
+  );
+}
+
+const REORIENT_SEQ = ["6-0", "0-1", "1-2", "2-3", "3-4", "4-5", "5-6", "6-1", "1-5"];
+
+test("el 2º cruce no doble queda al costado y una casilla hacia la línea principal (derecha)", () => {
+  const round = playSequence(
+    tileOf("6-6"),
+    REORIENT_SEQ.map((id) => ({ tile: tileOf(id), side: "right" as const }))
+  );
+  const prev = round.live.placements.find((p) => p.tile.id === "6-1")!;
+  const cruce = round.live.placements.find((p) => p.tile.id === "1-5")!;
+
+  assert.equal(prev.orientation, "vertical", "el antecedente es el tramo vertical");
+  assert.equal(cruce.orientation, "horizontal", "la ficha que cruza vuelve a horizontal");
+
+  // Al costado: su borde de entrada toca el costado izquierdo de la anterior.
+  assertNear(cruce.x + 1, prev.x - 0.5, "no toca el costado del tramo");
+  // Una casilla hacia la línea principal: su borde superior queda en el centro
+  // de la anterior (ya no al ras del extremo superior).
+  assertNear(cruce.y - 0.5, prev.y, "no baja una casilla respecto del extremo");
+  // Contacto por la arista completa: su canto cabe dentro del costado del tramo.
+  assert.ok(cruce.y - 0.5 >= prev.y - 1 - 1e-9, "sobresale por encima del extremo");
+  assert.ok(cruce.y + 0.5 <= prev.y + 1 + 1e-9, "se sale por debajo");
+});
+
+test("el 2º cruce no doble queda al costado y una casilla hacia la línea principal (izquierda)", () => {
+  const round = playSequence(
+    tileOf("6-6"),
+    REORIENT_SEQ.map((id) => ({ tile: tileOf(id), side: "left" as const }))
+  );
+  const prev = round.live.placements.find((p) => p.tile.id === "6-1")!;
+  const cruce = round.live.placements.find((p) => p.tile.id === "1-5")!;
+
+  assert.equal(prev.orientation, "vertical", "el antecedente es el tramo vertical");
+  assert.equal(cruce.orientation, "horizontal", "la ficha que cruza vuelve a horizontal");
+
+  // Al costado: su borde de entrada toca el costado derecho de la anterior.
+  assertNear(cruce.x - 1, prev.x + 0.5, "no toca el costado del tramo");
+  // Una casilla hacia la línea principal: su borde inferior queda en el centro
+  // de la anterior (ya no al ras del extremo inferior).
+  assertNear(cruce.y + 0.5, prev.y, "no sube una casilla respecto del extremo");
+  assert.ok(cruce.y + 0.5 <= prev.y + 1 + 1e-9, "sobresale por debajo del extremo");
+  assert.ok(cruce.y - 0.5 >= prev.y - 1 - 1e-9, "se sale por arriba");
+});

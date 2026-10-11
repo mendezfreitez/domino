@@ -21,8 +21,8 @@ const BOARD_PAD_X = 16;
 const BOARD_PAD_Y = 12;
 // Cabida reservada para una partida completa, en unidades de rejilla (una
 // ficha horizontal mide 2): radio máximo medido del serpentín desde el ancla
-// con la norma actual: ±22.24 en X y ±11.1 en Y; la cabida añade zonas de
-// colocación (±1) y margen de render (±1) por lado antes de redondear.
+// con la norma actual ≈ ±14.2 en X y ±7.6 en Y (incluido el tamaño de ficha);
+// los 50×28 reservados dejan holgura de sobra para zonas de colocación y margen.
 const RESERVED_W_UNITS = 50;
 const RESERVED_H_UNITS = 28;
 
@@ -33,9 +33,10 @@ const RESERVED_H_UNITS = 28;
 // no doble; si la anterior es doble, cruza conectada al extremo libre de esa
 // doble). Norma de reorientación: el tramo vertical cuenta 2 fichas (cruce + 1
 // recta) y la 3ª vuelve a orientarse en horizontal (arriba → izquierda, abajo
-// → derecha), solo si no es doble; excepción: si la 2ª ficha del tramo es
-// doble, este lado cuenta una ficha más y la reorienta la 4ª. Así la altura
-// queda acotada (~±3.5-4.5 unidades) y el crecimiento se traslada al eje
+// → derecha) pegada al costado de la última ficha del tramo y una casilla
+// hacia la línea principal respecto de su extremo, solo si no es doble;
+// excepción: si la 2ª ficha del tramo es doble, este lado cuenta una ficha más
+// y la reorienta la 4ª. Así la altura queda acotada (~±3.5-4.5 unidades) y el crecimiento se traslada al eje
 // horizontal.
 //
 // El render usa un ORIGEN FIJO (el centro del contenedor) y una escala fija por
@@ -132,7 +133,7 @@ function dropHandlers(
 // recalcula al crecer el tablero: las fichas ya colocadas conservan su posición
 // en píxeles mientras crece la cadena (no se reposicionan en cada jugada).
 // `tileH` se calcula para que una partida completa (cabida máxima real del
-// serpentín, medida con la norma actual: radio hasta ±22.3 en X y ±11.1 en Y,
+// serpentín, medida con la norma actual ≈ ±14.2 en X y ±7.6 en Y,
 // incluidas las zonas de colocación con margen) quepa en el área disponible del
 // contenedor (ajuste "aspect-fit"). El origen queda fijo en el centro del
 // contenedor: la tabla ocupa todo el alto y ancho posibles sin desbordar.
