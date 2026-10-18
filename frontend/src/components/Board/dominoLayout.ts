@@ -28,11 +28,6 @@ export interface ChainEnd {
   hasReoriented: boolean;
   /** Fichas colocadas en el tramo vertical desde el cruce (incluido el cruce). */
   segCount: number;
-  /**
-   * La 2ª ficha del tramo (la inmediata al cruce) fue doble: en ese lado el
-   * tramo cuenta una ficha más y la reorientación la ejecuta la 4ª, no la 3ª.
-   */
-  segSecondDouble: boolean;
   turnDirection: TurnDirection;
   connectionSide: ConnectionSide;
   lastPlacementIndex: number;
@@ -42,7 +37,25 @@ export interface ChainEnd {
 
 export interface BoardConfig {
   turnLimitPerSide: number;
+  /**
+   * Fichas colocadas en el tramo vertical (cruce incluido) antes de intentar
+   * reorientar; con el valor por defecto (2) el tramo dura cruce + 1 recta y la
+   * 3ª ficha intenta volver a horizontal. La cuenta es solo un mínimo: si la
+   * separación con la línea principal no da, la ficha va recta y el giro se
+   * pospone.
+   */
   reorientLimit: number;
+  /**
+   * Hueco mínimo, en unidades de rejilla, entre la banda de la línea principal y
+   * la de la línea secundaria. Se mide entre bordes y contando los dobles de
+   * ambas: la principal ocupa y = 0 con dobles que llegan a ±1, y la secundaria
+   * corre sobre el eje `y` con dobles que llegan a `|y| - 1`. Para que el hueco
+   * sea de `lineSeparation` hace falta `|y| >= lineSeparation + 2`.
+   *
+   * 2 unidades = 1 ficha (una ficha mide 2 de largo y 1 de grosor): es el piso
+   * que nunca se baja. En la práctica el hueco suele quedar en 2.5–3.5 unidades.
+   */
+  lineSeparation: number;
   tileGap: number;
   rightTurnDirection: TurnDirection;
   leftTurnDirection: TurnDirection;
@@ -65,8 +78,13 @@ export interface ChainBuilder {
 }
 
 export const DEFAULT_CONFIG: BoardConfig = {
-  turnLimitPerSide: 6,
-  reorientLimit: 2,
+  turnLimitPerSide: 7,
+  // El tramo vertical intenta el 2º giro con, como mínimo, cruce + 1 recta
+  // (2 fichas contadas); la 3ª del tramo es la que reorienta si hay hueco.
+  reorientLimit: 1,
+  // Hueco mínimo entre línea principal y línea secundaria: 2 unidades = 1
+  // ficha, contando los dobles de ambas líneas (piso estructural).
+  lineSeparation: 1,
   tileGap: 0.02,
   rightTurnDirection: "UP",
   leftTurnDirection: "DOWN",
@@ -85,6 +103,11 @@ const CONNECTION_SIDE: Record<Direction, ConnectionSide> = {
   UP: "BOTTOM",
   DOWN: "TOP",
 };
+
+// Mediaaltura de la banda que ocupa una línea con sus dobles: una doble en
+// línea horizontal se dibuja vertical y sobresale 1 unidad a cada lado del eje.
+// La línea principal pasa por y = 0, así que sus dobles llegan a ±1.
+const LINE_BAND_HALF = 1;
 
 export function isDouble(tile: DominoTile): boolean {
   return tile.left === tile.right;
@@ -171,6 +194,61 @@ interface GeometryInput {
   freeValue: number;
 }
 
+/**
+ * Geometría de la reorientación (2º giro): el tramo vertical pasa a horizontal.
+ *
+ * La ficha que gira se conecta de forma RASANTE con el extremo de la última
+ * ficha del tramo: su arista larga queda al ras de la cara libre del antecedente
+ * (la punta del tramo, o la cara de la doble si el antecedente es una doble
+ * perpendicular, dibujada en "T") y la pieza nueva queda FUERA del extremo, más
+ * lejos de la línea principal. Es el mismo tipo de contacto que el primer
+ * cruce —arista larga contra la cara del extremo— girado 90°, de modo que la
+ * conexión sigue siendo de borde a cara, como en todo el dominó:
+ *
+ * * Antecedente no doble (cara de 1 u): la ficha nueva se desplaza media
+ *   casilla hacia la dirección del giro (izquierda en `UP → LEFT`, derecha en
+ *   `DOWN → RIGHT`) para cubrir la cara de la punta entera, con la cara
+ *   contraria al giro alineada con el costado del tramo.
+ * * Antecedente doble perpendicular (cara de 2 u): la ficha nueva se alinea
+ *   con la doble y toca su extremo con la arista larga completa.
+ *
+ * La ficha devuelta ocupa el eje de la línea secundaria que nace aquí (`y` del
+ * resultado), eje que todas las fichas posteriores del tramo horizontal
+ * conservan.
+ */
+function reorientGeometry(
+  end: ChainEnd,
+  prev: PositionedTile | null,
+  freeValue: number
+): Geometry {
+  const up = end.direction === "UP";
+  const direction: Direction = up ? "LEFT" : "RIGHT";
+  // Rasante con el extremo: el borde de la ficha nueva toca la cara libre del
+  // antecedente (`end` es ese extremo) y la pieza queda un paso más allá, hacia
+  // fuera de la línea principal.
+  const cy = up ? end.y - 0.5 : end.y - 0.5;
+  const prevWideFace =
+    prev !== null && prev.orientation === "horizontal"; // doble perpendicular en tramo vertical
+  const cx = prevWideFace
+    ? prev!.x
+    : up
+      ? end.x - 0.5
+      : end.x + 0.5;
+  return {
+    x: cx,
+    y: cy,
+    orientation: "horizontal",
+    direction,
+    connectionSide: CONNECTION_SIDE[direction],
+    nextX: up ? cx - 1 : cx + 1,
+    nextY: cy,
+    nextDirection: direction,
+    nextConnectionValue: freeValue,
+    turned: false,
+    reoriented: true,
+  };
+}
+
 function computeGeometry(
   input: GeometryInput,
   end: ChainEnd,
@@ -255,58 +333,29 @@ function computeGeometry(
     };
   }
 
-  // Reorientación (2º giro): una vez cruzado, el tramo vertical cuenta
+  // Reorientación (2º giro): una vez cruzado, el tramo vertical lleva
   // `reorientLimit` fichas (incluido el cruce, que es la 1ª); con el valor por
-  // defecto (2) la 3ª ficha del tramo vuelve a orientarse en horizontal
-  // (derecha: arriba → izquierda; izquierda: abajo → derecha). Excepción: si la
-  // 2ª ficha del tramo (la inmediata al cruce) es doble, `segSecondDouble`
-  // retrasa una posición la reorientación en ese lado (la ejecuta la 4ª).
-  // Si la ficha de reorientación va antecedida por una doble (que en tramo
-  // vertical se dibuja perpendicular, en "T"), se conecta con el extremo lateral
-  // de esa doble en lugar de posponer como en el cruce inicial.
+  // defecto (2) la 3ª ficha del tramo intenta volver a orientarse en horizontal
+  // (derecha: arriba → izquierda; izquierda: abajo → derecha).
   //
-  // Contacto no doble → no doble: la pieza que se reorienta se coloca AL
-  // COSTADO de la última ficha del tramo (no encima de su cara) y una casilla
-  // hacia la línea principal respecto de su extremo libre (baja en UP, sube en
-  // DOWN), con contacto por su arista completa. NUNCA se dibuja en "T": la
-  // conexión en "T" solo existe cuando el antecedente es una doble.
-  const reorientLimit = end.segSecondDouble
-    ? config.reorientLimit + 1
-    : config.reorientLimit;
+  // NORMA DE SEPARACIÓN: la reorientación solo se ejecuta si la línea
+  // secundaria que nace con ella deja, como mínimo, `lineSeparation` unidades
+  // de hueco libre respecto de la línea principal (dobles de ambas incluidos,
+  // es decir 1 ficha de piso). Si no hay hueco, la ficha se coloca recta en el
+  // tramo vertical y el giro queda pospuesto a la siguiente ficha del tramo.
+  // Así la separación está garantizada por construcción, aunque en el tramo
+  // haya dobles.
   const wantReorient =
     end.hasTurned &&
     !end.hasReoriented &&
-    end.segCount >= reorientLimit &&
+    end.segCount >= config.reorientLimit &&
     !input.isDoubleTile;
 
   if (wantReorient) {
-    const up = end.direction === "UP";
-    const direction: Direction = up ? "LEFT" : "RIGHT";
-    let cx: number;
-    let cy: number;
-    if (prevIsDouble && prev) {
-      const prevHalf = prev.orientation === "horizontal" ? 1 : 0.5;
-      cx = up ? prev.x - prevHalf - 1 : prev.x + prevHalf + 1;
-      cy = prev.y;
-    } else {
-      // No doble → no doble: al costado de la última ficha del tramo y una
-      // casilla hacia la línea principal respecto de su extremo libre.
-      cx = up ? end.x - 1.5 : end.x + 1.5;
-      cy = up ? end.y + 0.5 : end.y - 0.5;
-    }
-    return {
-      x: cx,
-      y: cy,
-      orientation: "horizontal",
-      direction,
-      connectionSide: CONNECTION_SIDE[direction],
-      nextX: up ? cx - 1 : cx + 1,
-      nextY: cy,
-      nextDirection: direction,
-      nextConnectionValue: input.freeValue,
-      turned: false,
-      reoriented: true,
-    };
+    const candidate = reorientGeometry(end, prev, input.freeValue);
+    const clear =
+      Math.abs(candidate.y) - LINE_BAND_HALF - LINE_BAND_HALF;
+    if (clear >= config.lineSeparation) return candidate;
   }
 
   const direction = end.direction;
@@ -430,9 +479,8 @@ export function placeTile(
   } else if (g.reoriented) {
     end.hasReoriented = true;
   } else if (end.hasTurned && !end.hasReoriented) {
-    // La 2ª ficha del tramo (segCount===1 antes de sumar) siendo doble retrasa
-    // la reorientación una ficha más en este lado (la 4ª en vez de la 3ª).
-    if (end.segCount === 1 && isDouble(tile)) end.segSecondDouble = true;
+    // Ficha recta del tramo: sigue sumando hasta que toque reorientar (la cuenta
+    // llega a `reorientLimit` y la línea secundaria deja el hueco mínimo).
     end.segCount += 1;
   }
   end.direction = g.nextDirection;
@@ -528,7 +576,6 @@ export function createChain(
       hasTurned: false,
       hasReoriented: false,
       segCount: 0,
-      segSecondDouble: false,
       turnDirection: config.leftTurnDirection,
       connectionSide: "RIGHT",
       lastPlacementIndex: -1,
@@ -542,7 +589,6 @@ export function createChain(
       hasTurned: false,
       hasReoriented: false,
       segCount: 0,
-      segSecondDouble: false,
       turnDirection: config.rightTurnDirection,
       connectionSide: "LEFT",
       lastPlacementIndex: -1,

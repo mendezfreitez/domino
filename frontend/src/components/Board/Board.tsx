@@ -20,9 +20,11 @@ const DEFAULT_TILE_H = 64;
 const BOARD_PAD_X = 16;
 const BOARD_PAD_Y = 12;
 // Cabida reservada para una partida completa, en unidades de rejilla (una
-// ficha horizontal mide 2): radio máximo medido del serpentín desde el ancla
-// con la norma actual ≈ ±14.2 en X y ±7.6 en Y (incluido el tamaño de ficha);
-// los 50×28 reservados dejan holgura de sobra para zonas de colocación y margen.
+// ficha horizontal mide 2): recorrido máximo medido con la norma actual
+// ≈ hasta ±24 en X (una línea secundaria muy larga cuando un lado no llega a
+// cruzar) y ≈ ±9 en Y (tamaño de ficha y zonas de colocación incluidos); los
+// 50×28 reservados (±25 en X, ±14 en Y) los cubren y el test de partida
+// completa verifica que el serpentín de 28 fichas cabe dentro.
 const RESERVED_W_UNITS = 50;
 const RESERVED_H_UNITS = 28;
 
@@ -31,13 +33,17 @@ const RESERVED_H_UNITS = 28;
 // (el ancla no cuenta); con 6 contadas, la 7ª colocación de la derecha gira
 // hacia arriba y la 7ª de la izquierda hacia abajo (la ficha que cruza debe ser
 // no doble; si la anterior es doble, cruza conectada al extremo libre de esa
-// doble). Norma de reorientación: el tramo vertical cuenta 2 fichas (cruce + 1
-// recta) y la 3ª vuelve a orientarse en horizontal (arriba → izquierda, abajo
-// → derecha) pegada al costado de la última ficha del tramo y una casilla
-// hacia la línea principal respecto de su extremo, solo si no es doble;
-// excepción: si la 2ª ficha del tramo es doble, este lado cuenta una ficha más
-// y la reorienta la 4ª. Así la altura queda acotada (~±3.5-4.5 unidades) y el crecimiento se traslada al eje
-// horizontal.
+// doble). Norma de reorientación: el tramo vertical lleva 2 fichas (cruce + 1
+// recta) y la 3ª intenta volver a orientarse en horizontal (arriba → izquierda,
+// abajo → derecha) solo si no es doble; la conexión es RASANTE, con la arista
+// larga de la ficha al ras del extremo de la última del tramo (o de la doble
+// perpendicular si la antecedente es doble), la pieza quedando hacia fuera, más
+// lejos de la línea principal. NORMA DE SEPARACIÓN: la reorientación solo se
+// ejecuta si la línea secundaria que nace con ella deja ≥ 2 unidades de hueco
+// (1 ficha) respecto de la línea principal, contando los dobles de ambas
+// líneas; si no, la ficha sigue recta y el giro se pospone. Así el hueco queda
+// garantizado por construcción y el crecimiento se traslada al eje vertical del
+// tramo y al horizontal.
 //
 // El render usa un ORIGEN FIJO (el centro del contenedor) y una escala fija por
 // ronda: `tileH` se calcula UNA SOLA VEZ (al iniciar la ronda o al redimensionar
@@ -133,7 +139,7 @@ function dropHandlers(
 // recalcula al crecer el tablero: las fichas ya colocadas conservan su posición
 // en píxeles mientras crece la cadena (no se reposicionan en cada jugada).
 // `tileH` se calcula para que una partida completa (cabida máxima real del
-// serpentín, medida con la norma actual ≈ ±14.2 en X y ±7.6 en Y,
+// serpentín, medida con la norma actual ≈ hasta ±24 en X y ±9 en Y,
 // incluidas las zonas de colocación con margen) quepa en el área disponible del
 // contenedor (ajuste "aspect-fit"). El origen queda fijo en el centro del
 // contenedor: la tabla ocupa todo el alto y ancho posibles sin desbordar.
@@ -469,7 +475,7 @@ export function Board({
             {...dropHandlers("right", onDropTile)}
           />
         ) : null}
-        <div style={{ position: 'fixed', bottom: '37%', left: '35%', fontSize: '2.7rem', fontWeight: '700', opacity: '.7', width: '700px', textAlign: 'center' }}>
+        <div style={{ height: '66px', position: 'fixed', bottom: '37%', left: '35%', fontSize: '2.7rem', fontWeight: '700', opacity: '.7', width: '700px', textAlign: 'center' }}>
           {estadoPartida}
         </div>
       </div>

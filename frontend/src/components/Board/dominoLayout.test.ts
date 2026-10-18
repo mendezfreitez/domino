@@ -10,7 +10,12 @@ import {
   replayChain,
   DEFAULT_CONFIG,
 } from "./dominoLayout.ts";
-import type { ChainBuilder, ChainLayout, Side } from "./dominoLayout.ts";
+import type {
+  ChainBuilder,
+  ChainLayout,
+  PositionedTile,
+  Side,
+} from "./dominoLayout.ts";
 
 /**
  * El tablero se dibuja a partir de una cadena que crece durante la ronda. Al
@@ -371,14 +376,10 @@ test("replayChain coloca el ancla donde se le pide", () => {
 });
 
 /**
- * El 2º cruce (reorientación) no debe sobresalir: cuando el antecedente es no
- * doble, la ficha se coloca AL COSTADO del último tramo y una casilla hacia la
- * línea principal respecto de su extremo libre, con contacto por la arista
- * completa.
- *
- * Secuencia usada (todas al mismo lado): 7ª ficha = cruce, 8ª = recta del tramo
- * (no doble, no retrasa), 9ª = la que se reorienta. El test compara la 9ª con la
- * 8ª (su antecedente).
+ * El 2º cruce (reorientación) conecta de forma RASANTE: la ficha que gira queda
+ * fuera del extremo del tramo (más lejos de la línea principal), con su arista
+ * larga al ras de la cara libre del antecedente y media casilla hacia la
+ * dirección del giro para cubrir la cara entera.
  */
 function tileOf(id: string): DominoTile {
   const [left, right] = id.split("-").map(Number);
@@ -392,9 +393,69 @@ function assertNear(actual: number, expected: number, msg: string): void {
   );
 }
 
-const REORIENT_SEQ = ["6-0", "0-1", "1-2", "2-3", "3-4", "4-5", "5-6", "6-1", "1-5"];
+/**
+ * Tramo vertical con fichas seguidas, todas al mismo lado: la 7ª es el cruce,
+ * la 8ª va recta (el tramo lleva cruce + 1 recta, 2 fichas contadas) y la 9ª
+ * es la que reorienta al ras del extremo; la 10ª continúa recta sobre la línea
+ * secundaria y la 11ª es una doble sobre esa línea.
+ */
+const REORIENT_SEQ = [
+  "6-0",
+  "0-1",
+  "1-2",
+  "2-3",
+  "3-4",
+  "4-5",
+  "5-6",
+  "6-1",
+  "1-5",
+  "0-5",
+  "0-0",
+];
 
-test("el 2º cruce no doble queda al costado y una casilla hacia la línea principal (derecha)", () => {
+/** Bounding box de una ficha colocada, en unidades de rejilla. */
+function boxOf(p: PositionedTile) {
+  const w = p.orientation === "horizontal" ? 2 : 1;
+  const h = p.orientation === "horizontal" ? 1 : 2;
+  return { x0: p.x - w / 2, x1: p.x + w / 2, y0: p.y - h / 2, y1: p.y + h / 2 };
+}
+
+/**
+ * Hueco mínimo (unidades de rejilla) entre la línea principal (fichas cuyo
+ * centro está en y = 0, dobles incluidas) y la línea secundaria (el tramo
+ * horizontal nacido de la reorientación). Solo se miden las parejas que se
+ * solapan en X, que es donde el ojo ve el hueco.
+ */
+function minMainToSecondaryGap(layout: ChainLayout): number {
+  const main = layout.placements.filter((p) => Math.abs(p.y) < 1e-9);
+  const secondary = layout.placements.filter(
+    (p) =>
+      (p.direction === "LEFT" || p.direction === "RIGHT") && Math.abs(p.y) > 1
+  );
+  let gap = Infinity;
+  for (const m of main) {
+    for (const s of secondary) {
+      const mb = boxOf(m);
+      const sb = boxOf(s);
+      if (mb.x1 <= sb.x0 + 1e-9 || sb.x1 <= mb.x0 + 1e-9) continue;
+      if (sb.y1 <= mb.y0) gap = Math.min(gap, mb.y0 - sb.y1);
+      else if (mb.y1 <= sb.y0) gap = Math.min(gap, sb.y0 - mb.y1);
+      else gap = -1;
+    }
+  }
+  return gap;
+}
+
+/** NORMA DE SEPARACIÓN: el hueco entre ambas líneas nunca baja de `lineSeparation`. */
+function assertSeparation(round: PlayedRound, label: string): void {
+  const gap = minMainToSecondaryGap(round.live);
+  assert.ok(
+    gap >= DEFAULT_CONFIG.lineSeparation,
+    `${label}: hueco de ${gap.toFixed(2)} u (< ${DEFAULT_CONFIG.lineSeparation} u = 1 ficha)`
+  );
+}
+
+test("el 2º cruce rasante queda al ras del extremo, hacia fuera (derecha)", () => {
   const round = playSequence(
     tileOf("6-6"),
     REORIENT_SEQ.map((id) => ({ tile: tileOf(id), side: "right" as const }))
@@ -404,18 +465,21 @@ test("el 2º cruce no doble queda al costado y una casilla hacia la línea princ
 
   assert.equal(prev.orientation, "vertical", "el antecedente es el tramo vertical");
   assert.equal(cruce.orientation, "horizontal", "la ficha que cruza vuelve a horizontal");
+  assert.equal(cruce.direction, "LEFT", "arriba reorienta hacia la izquierda");
 
-  // Al costado: su borde de entrada toca el costado izquierdo de la anterior.
-  assertNear(cruce.x + 1, prev.x - 0.5, "no toca el costado del tramo");
-  // Una casilla hacia la línea principal: su borde superior queda en el centro
-  // de la anterior (ya no al ras del extremo superior).
-  assertNear(cruce.y - 0.5, prev.y, "no baja una casilla respecto del extremo");
-  // Contacto por la arista completa: su canto cabe dentro del costado del tramo.
-  assert.ok(cruce.y - 0.5 >= prev.y - 1 - 1e-9, "sobresale por encima del extremo");
-  assert.ok(cruce.y + 0.5 <= prev.y + 1 + 1e-9, "se sale por debajo");
+  // Rasante: su arista inferior toca la punta del tramo, sin bajar hacia la
+  // línea principal (queda por encima del extremo libre).
+  assertNear(cruce.y + 0.5, prev.y - 1, "no toca la punta por el ras");
+  assert.ok(cruce.y < prev.y, "queda dentro del tramo en vez de hacia fuera");
+  // Media casilla hacia el giro (izquierda): la cara opuesta queda al ras del
+  // costado del tramo y la ficha sobresale hacia la izquierda, cubriendo la
+  // cara de la punta entera.
+  assertNear(cruce.x + 1, prev.x + 0.5, "no queda al ras por el lado opuesto al giro");
+  assert.ok(cruce.x - 1 < prev.x - 0.5, "no sobresale hacia la dirección del giro");
+  assertSeparation(round, "tramo recto (derecha)");
 });
 
-test("el 2º cruce no doble queda al costado y una casilla hacia la línea principal (izquierda)", () => {
+test("el 2º cruce rasante queda al ras del extremo, hacia fuera (izquierda)", () => {
   const round = playSequence(
     tileOf("6-6"),
     REORIENT_SEQ.map((id) => ({ tile: tileOf(id), side: "left" as const }))
@@ -425,12 +489,107 @@ test("el 2º cruce no doble queda al costado y una casilla hacia la línea princ
 
   assert.equal(prev.orientation, "vertical", "el antecedente es el tramo vertical");
   assert.equal(cruce.orientation, "horizontal", "la ficha que cruza vuelve a horizontal");
+  assert.equal(cruce.direction, "RIGHT", "abajo reorienta hacia la derecha");
 
-  // Al costado: su borde de entrada toca el costado derecho de la anterior.
-  assertNear(cruce.x - 1, prev.x + 0.5, "no toca el costado del tramo");
-  // Una casilla hacia la línea principal: su borde inferior queda en el centro
-  // de la anterior (ya no al ras del extremo inferior).
-  assertNear(cruce.y + 0.5, prev.y, "no sube una casilla respecto del extremo");
-  assert.ok(cruce.y + 0.5 <= prev.y + 1 + 1e-9, "sobresale por debajo del extremo");
-  assert.ok(cruce.y - 0.5 >= prev.y - 1 - 1e-9, "se sale por arriba");
+  // Rasante: su arista superior toca la punta del tramo, sin subir hacia la
+  // línea principal (queda por debajo del extremo libre).
+  assertNear(cruce.y - 0.5, prev.y + 1, "no toca la punta por el ras");
+  assert.ok(cruce.y > prev.y, "queda dentro del tramo en vez de hacia fuera");
+  // Media casilla hacia el giro (derecha): la cara opuesta queda al ras del
+  // costado del tramo y la ficha sobresale hacia la derecha, cubriendo la
+  // cara de la punta entera.
+  assertNear(cruce.x - 1, prev.x - 0.5, "no queda al ras por el lado opuesto al giro");
+  assert.ok(cruce.x + 1 > prev.x + 0.5, "no sobresale hacia la dirección del giro");
+  assertSeparation(round, "tramo recto (izquierda)");
+});
+
+/**
+ * NORMA DE SEPARACIÓN: entre la línea principal y la línea secundaria debe
+ * quedar, como mínimo, `lineSeparation` unidades de hueco (2 u = 1 ficha),
+ * contando las dobles de ambas líneas. Se comprueba en los tres caminos del
+ * tramo vertical: recto, con doble en la 2ª posición (el giro se pospone hasta
+ * lograr el hueco) y con una doble ya colocada sobre la línea secundaria.
+ */
+test("la línea secundaria nace con el hueco mínimo incluso con una doble sobre ella", () => {
+  const round = playSequence(
+    tileOf("6-6"),
+    REORIENT_SEQ.map((id) => ({ tile: tileOf(id), side: "right" as const }))
+  );
+  const dobleSobreLinea = round.live.placements.find((p) => p.tile.id === "0-0")!;
+  assert.equal(
+    dobleSobreLinea.orientation,
+    "vertical",
+    "una doble sobre la línea secundaria se dibuja perpendicular"
+  );
+  assertSeparation(round, "tramo recto con doble sobre la línea");
+});
+
+test("una doble en la 2ª posición del tramo posterga el giro hasta lograr la separación", () => {
+  const seq = [
+    "4-5", "5-6", "6-0", "0-1", "1-2", "2-3",
+    // 7ª = cruce (no doble); 8ª = la doble que abre el tramo, en perpendicular.
+    "3-6", "6-6",
+    // La cuenta ya lo permitiría en la 9ª, pero aún no hay hueco: sigue recto.
+    "6-1",
+    // La 10ª reorienta ya con la separación lograda.
+    "1-3", "3-5",
+  ];
+  const round = playSequence(
+    tileOf("3-4"),
+    seq.map((id) => ({ tile: tileOf(id), side: "right" as const }))
+  );
+  const doble = round.live.placements.find((p) => p.tile.id === "6-6")!;
+  assert.equal(doble.orientation, "horizontal", "la doble del tramo se dibuja perpendicular");
+  const recta = round.live.placements.find((p) => p.tile.id === "6-1")!;
+  assert.equal(recta.direction, "UP", "mientras no hay hueco la ficha sigue recta");
+  assert.equal(recta.orientation, "vertical", "y el tramo sigue hacia arriba");
+  const cruce = round.live.placements.find((p) => p.tile.id === "1-3")!;
+  assert.equal(cruce.direction, "LEFT", "al final reorienta hacia la izquierda");
+  assert.ok(
+    Math.abs(cruce.y) >= DEFAULT_CONFIG.lineSeparation + 2,
+    "el tramo crece hasta lograr la separación"
+  );
+  assertSeparation(round, "doble en la 2ª posición");
+});
+
+test("la ficha reorienta al ras del extremo de la doble antecedente (izquierda)", () => {
+  const seq = [
+    "4-5", "5-6", "6-0", "0-1", "1-2", "2-2",
+    // 7ª = cruce sobre una doble de la principal; 8ª = doble que abre el tramo.
+    "2-3", "3-3",
+    // 9ª = la que reorienta con contacto rasante en el extremo de la doble.
+    "3-5",
+  ];
+  const round = playSequence(
+    tileOf("4-4"),
+    seq.map((id) => ({ tile: tileOf(id), side: "left" as const }))
+  );
+  const doble = round.live.placements.find((p) => p.tile.id === "3-3")!;
+  const cruce = round.live.placements.find((p) => p.tile.id === "3-5")!;
+  assert.equal(doble.orientation, "horizontal", "la doble del tramo se dibuja perpendicular");
+  assert.equal(cruce.orientation, "horizontal", "la ficha que gira vuelve a horizontal");
+  assert.equal(cruce.direction, "RIGHT", "abajo reorienta hacia la derecha");
+  // Rasante con el extremo de la doble: arista superior al ras de su cara
+  // inferior, alineada para tocar los 2 unidades de esa cara.
+  assertNear(cruce.y - 0.5, doble.y + 0.5, "no toca el extremo de la doble por el ras");
+  assertNear(cruce.x, doble.x, "no se alinea con la cara de 2 u de la doble");
+  assert.ok(cruce.y > doble.y, "queda fuera del extremo, más lejos de la principal");
+  assertSeparation(round, "doble antecedente al giro (rasante)");
+});
+
+test("una partida completa respeta la separación y cabe en la cabida reservada", () => {
+  const solved = findFullChain(makeSet());
+  assert.ok(solved, "no se encontró una cadena con las 28 fichas");
+  const round = playSequence(solved.seed, solved.steps);
+  assert.equal(round.board.length, 28, "no se repartieron las 28 fichas");
+  assertSeparation(round, "partida completa");
+  // Cabida reservada en Board.tsx: 50×28 unidades (±25 en X, ±14 en Y).
+  assert.ok(
+    round.live.minX >= -25 && round.live.maxX <= 25,
+    `se sale de la cabida reservada en X: [${round.live.minX}, ${round.live.maxX}]`
+  );
+  assert.ok(
+    round.live.minY >= -14 && round.live.maxY <= 14,
+    `se sale de la cabida reservada en Y: [${round.live.minY}, ${round.live.maxY}]`
+  );
 });

@@ -150,7 +150,7 @@ Para evitar que el tramo vertical crezca sin límite y genere overflow vertical 
 * lado **derecho** (tramo que sube) → las siguientes fichas se orientan hacia la **izquierda**,
 * lado **izquierdo** (tramo que baja) → las siguientes fichas se orientan hacia la **derecha**.
 
-**Excepción (retraso por doble en 2ª posición):** si la **2ª ficha del tramo** (la inmediatamente posterior al cruce) es una **ficha doble**, en **ese lado** el tramo cuenta una ficha más y la reorientación la ejecuta la **4ª ficha** del tramo (no la 3ª).
+**Norma de separación (condición necesaria del giro):** la reorientación **solo se ejecuta** si la línea secundaria que nace con ella deja, como mínimo, `lineSeparation` unidades de hueco con la línea principal (ver §5.3). Si no hay hueco, la ficha se coloca **recta** en el tramo vertical y el giro queda **pospuesto** a la siguiente ficha no doble del tramo. Así el tramo puede crecer más allá de las 2 fichas cuando hace falta, pero **nunca** acerca la línea secundaria a la principal.
 
 Conceptualmente (derecha: sube y luego va a la izquierda; izquierda: baja y luego va a la derecha):
 
@@ -158,21 +158,48 @@ Conceptualmente (derecha: sube y luego va a la izquierda; izquierda: baja y lueg
         ◀──── [ ][ ][ ] [ ][ ]          (derecha ya reorientada: sigue a la izquierda)
               [ ]
               |
+              |
 [ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]   (línea principal: cruce derecho arriba, izquierdo abajo)
+              |
               |
               [ ]
         [ ][ ][ ] [ ][ ] ────▶           (izquierda ya reorientada: sigue a la derecha)
 ```
 
-El tramo vertical de cada lado queda acotado al **cruce + 1 recta (2 fichas contadas)** y la **3ª** vuelve a la horizontal, limitando la altura del tablero.
+El tramo vertical de cada lado queda acotado al **cruce + 1 recta (2 fichas contadas)** como mínimo y la **3ª** vuelve a la horizontal, limitando la altura del tablero; la cuenta es un **mínimo**, no un máximo: si aún no hay hueco suficiente, el tramo sigue creciendo recto y el giro se aplaza.
 
 Restricciones de la reorientación (solo aplican al segundo giro; el cruce inicial conserva la regla 5.1):
 
-* **La ficha que se reorienta debe ser no doble.** Si al alcanzar las 2 fichas contadas del tramo toca reorientar en una ficha doble, esa ficha se coloca recta y la reorientación queda **pospuesta** hasta la siguiente ficha no doble del tramo.
-* Si la ficha de reorientación es **no doble pero está antecedida por una doble** (la doble en un tramo vertical se dibuja perpendicular, en forma de "T"), la ficha **sí se reorienta** y se conecta **con el extremo lateral de esa doble** (el extremo izquierdo para `UP → LEFT` y el derecho para `DOWN → RIGHT`), evitando así colisionar con la propia "T".
-* **Contacto no doble → no doble (nunca es "T"):** si la ficha de reorientación y su antecedente son **ambas no dobles**, la ficha se coloca **al costado** de la última ficha del tramo y **una casilla hacia la línea principal** respecto de su extremo libre (baja en el tramo que sube `UP`, lado derecho; sube en el que baja `DOWN`, lado izquierdo) — tocando el costado por su **arista completa**. La conexión en "T" (la pieza centrada sobre el extremo de otra) **solo existe cuando el antecedente es una doble**.
+* **La ficha que se reorienta debe ser no doble.** Si al tocar reorientar (por cuenta o por hueco) la ficha es doble, esa ficha se coloca recta y la reorientación queda **pospuesta** hasta la siguiente ficha no doble del tramo.
+* Si la ficha de reorientación es **no doble pero está antecedida por una doble** (la doble en un tramo vertical se dibuja perpendicular, en forma de "T"), la ficha **sí se reorienta** (si hay hueco) y se conecta de forma **rasante con el extremo de esa doble en el que termina la cadena** (la cara superior de la doble para `UP → LEFT`, la inferior para `DOWN → RIGHT`): su **arista larga entera** (2 unidades) se apoya sobre esa cara y la pieza queda **fuera del extremo**, más lejos de la línea principal, alineada con la doble. Si aún no hay hueco, la ficha va recta encima del extremo de la doble y el giro se pospone.
+* **Contacto no doble → no doble:** si la ficha de reorientación y su antecedente son **ambas no dobles** (o el antecedente es una doble ya alineada con el tramo, en el raro caso doble-doble), la ficha se coloca **fuera del extremo libre** del tramo con su **arista larga al ras de la cara de la punta** —cubriéndola entera— y **media casilla hacia la dirección del giro** (izquierda en `UP → LEFT`, derecha en `DOWN → RIGHT`), de modo que la cara opuesta al giro queda alineada con el costado del tramo.
+
+En ambos casos el contacto es de **borde a cara** (la arista larga de la ficha que gira contra la cara libre de la anterior), igual que en el cruce inicial pero girado 90°, y la pieza siempre queda **más lejos de la línea principal** que su antecedente: la conexión en "T" (pieza centrada sobre el extremo de otra perpendicular) **no existe** en el segundo giro.
 
 Un lado solo se reorienta una vez: después de la reorientación el extremo continúa creciendo en horizontal (izquierda o derecha según el lado) y ya no vuelve a girar.
+
+---
+
+## 5.3 Separación entre línea principal y línea secundaria
+
+La **línea principal** (horizontal, `y = 0`) y cada **línea secundaria** (el tramo horizontal que nace en la reorientación, sobre el eje `y`) deben quedar separadas por un **hueco mínimo**, medido **entre bordes** y contando las **fichas dobles de ambas líneas**:
+
+```ts
+interface BoardConfig {
+    // ...
+    lineSeparation: number; // hueco mínimo en unidades (por defecto 2 = 1 ficha)
+}
+```
+
+Cuentas de la banda (una ficha mide 2 de largo y 1 de grosor; una doble se dibuja perpendicular y sobresale 1 unidad a cada lado de su eje):
+
+* Línea principal: banda centrada en `y = 0`; sus dobles llegan a `±1`.
+* Línea secundaria: eje en `|y|`; sus dobles llegan a `|y| - 1`.
+* Hueco garantizado (dobles incluidos): `|y| - 2 >= lineSeparation`, es decir **`|y| >= 4`** con el valor por defecto. Sin dobles en la pareja el hueco real es aún mayor (`|y| - 1`).
+
+**Garantía por construcción:** la reorientación solo se ejecuta si su candidata a línea secundaria cumple la cuenta (§5.2); en caso contrario la ficha va recta y el giro se pospone. No existe ninguna excepción que pueda acercar una línea a la otra, así que el hueco mínimo vale **en toda partida**, contando dobles en los dos lados. El piso garantizado (doble en la principal y doble en la secundaria solapadas en X, justo en el límite) es de **2 unidades = 1 ficha**; en la práctica el hueco ronda las 2.5–3.5 unidades, porque el giro rasante suele salir bastante más lejos de la principal de lo que exige el mínimo.
+
+Como la línea principal es muy larga y la secundaria corta, el hueco solo se mide donde **ambas se solapan en horizontal**, que es donde el ojo percibe la separación.
 
 ---
 
@@ -246,7 +273,6 @@ interface ChainEnd {
     hasTurned: boolean;
     hasReoriented: boolean;   // ya hizo el 2º giro (reorientación horizontal)
     segCount: number;         // fichas del tramo vertical desde el cruce (incluido)
-    segSecondDouble: boolean; // la 2ª ficha del tramo fue doble → reorienta la 4ª
 }
 ```
 
@@ -619,8 +645,6 @@ interface ChainEnd {
 
     segCount: number;         // tramo vertical contado desde el cruce
 
-    segSecondDouble: boolean; // 2ª ficha del tramo doble → reorienta la 4ª
-
     turnDirection?: "UP" | "DOWN";
 }
 ```
@@ -668,14 +692,13 @@ Una vez que el extremo derecho gira hacia arriba:
 direction = "UP"
 ```
 
-las siguientes fichas continúan hacia arriba mientras el tramo vertical no alcance las **2 fichas contadas (incluido el cruce)**. Al colocarse la 3ª ficha del tramo, el extremo se reorienta en horizontal y **cambia de dirección**:
+las siguientes fichas continúan hacia arriba mientras el tramo vertical no alcance las **2 fichas contadas (incluido el cruce)** o el hueco mínimo con la línea principal (§5.3). Al colocarse la 3ª ficha del tramo (no doble y con hueco suficiente), el extremo se reorienta en horizontal y **cambia de dirección**:
 
 * derecha (`UP`) → **`LEFT`**,
 * izquierda (`DOWN`) → **`RIGHT`**.
 
 ```text
 RIGHT
-  ↓
   ↓
   ↓
   ↓
@@ -1025,10 +1048,11 @@ Cuando cada tramo vertical cuenta **2 fichas hacia arriba/abajo (incluido el cru
 
 * El tramo derecho (arriba) reorienta las siguientes fichas hacia la **izquierda** (`7[8][9] → [10][11]`… hacia la izquierda).
 * El tramo izquierdo (abajo) reorienta las siguientes fichas hacia la **derecha**.
+* El giro solo se ejecuta si deja el hueco mínimo con la línea principal (§5.3); si no, `[10]` va recta y el giro se pospone.
 
-**Contacto de la pieza que se reorienta (caso no doble → no doble):** cuando la ficha de reorientación `[10]` y su antecedente `[9]` son **ambas no dobles**, `[10]` se coloca **al costado** de `[9]` y **una casilla hacia la línea principal** respecto de su extremo libre (baja en el tramo que sube `UP`, lado derecho; sube en el que baja `DOWN`, lado izquierdo) — tocando el costado por su **arista completa**. Esta conexión **nunca es en "T"**: la pieza queda pegada al costado, no centrada sobre el extremo. La conexión en "T" solo existe cuando el antecedente es una **doble** (regla 5.2).
+**Contacto de la pieza que se reorienta:** la ficha que gira `[10]` se coloca **rasante con el extremo de `[9]`**, fuera del tramo y más lejos de la línea principal: su **arista larga entera** toca la cara libre de `[9]` (la punta del tramo; si `[9]` es una doble perpendicular, la cara de 2 u por donde sale la cadena, con `[10]` alineada a ella) y, si `[9]` es no doble, `[10]` va **media casilla hacia la dirección del giro** (izquierda en `UP → LEFT`, derecha en `DOWN → RIGHT`) para cubrir la cara de la punta completa. El contacto es siempre de **borde a cara**, nunca en "T" (regla 5.2).
 
-Con esto la altura queda acotada a unas **±3.5 unidades** (en lugar de crecer hacia ±14), evitando el overflow vertical de `div.board`. El crecimiento se traslada al eje horizontal. El render usa un **marco fijo por ronda**: el origen queda fijo en el centro del contenedor y la escala (`tileH`) se calcula **una sola vez** (al iniciar la ronda o al redimensionar la ventana) para que una partida completa quepa en la **cabida reservada** de la mesa (medida con la norma actual ≈ ±14.2 unidades en X y ±7.6 en Y desde el ancla, incluido el tamaño de ficha; se reservan **50×28 unidades**), con ajuste "aspect-fit". Mientras crece la cadena la escala y el origen **no cambian**: las fichas ya colocadas conservan su posición en píxeles y no se reposicionan en cada jugada. Si una partida extrema o una ventana muy pequeña exceden la cabida, el contenedor permite desplazarse (scroll como reserva).
+Con esto la altura queda acotada a unas **±9 unidades** (medido con la norma actual, tamaño de ficha y zonas de colocación incluidos; en lugar de crecer sin límite), evitando el overflow vertical de `div.board`, y la línea secundaria queda siempre a **≥ 2 unidades (1 ficha)** de la principal (en la práctica ronda las 2.5–3.5). El crecimiento restante se traslada al eje horizontal. El render usa un **marco fijo por ronda**: el origen queda fijo en el centro del contenedor y la escala (`tileH`) se calcula **una sola vez** (al iniciar la ronda o al redimensionar la ventana) para que una partida completa quepa en la **cabida reservada** de la mesa (medida con la norma actual ≈ hasta ±24 unidades en X —una línea secundaria muy larga cuando un lado no llega a cruzar— y ±9 en Y desde el ancla, incluido el tamaño de ficha; se reservan **50×28 unidades**, es decir ±25/±14, y el test de partida completa verifica que el serpentín cabe dentro), con ajuste "aspect-fit". Mientras crece la cadena la escala y el origen **no cambian**: las fichas ya colocadas conservan su posición en píxeles y no se reposicionan en cada jugada. Si una partida extrema o una ventana muy pequeña exceden la cabida, el contenedor permite desplazarse (scroll como reserva).
 
 ---
 
@@ -1142,13 +1166,13 @@ La implementación será considerada correcta cuando:
 * [ ] Los extremos puedan continuar la cadena.
 * [ ] Los cruces sean de 90°.
 * [ ] El giro se posponga solo si toca en una ficha doble (la que debe girar). Si la ficha que gira es no doble antecedida por una doble, el cruce se ejecuta conectado al extremo libre de esa doble.
-* [ ] Tras el cruce, el tramo vertical cuente 2 fichas (incluido el cruce) y la siguiente (3ª del tramo) se reoriente en horizontal: derecha → izquierda, izquierda → derecha.
-* [ ] Si la 2ª ficha del tramo (la inmediata al cruce) es doble, ese lado retrase la reorientación y la ejecute la 4ª ficha del tramo.
+* [ ] Tras el cruce, el tramo vertical cuente 2 fichas (incluido el cruce) y la 3ª del tramo se reoriente en horizontal: derecha → izquierda, izquierda → derecha.
+* [ ] La reorientación solo se ejecute si la línea secundaria deja, como mínimo, 2 unidades de hueco (1 ficha) con la línea principal contando los dobles de ambas; si no, la ficha siga recta y el giro quede pospuesto.
 * [ ] La reorientación solo se ejecute sobre fichas no dobles; si toca en una doble, se posponga a la siguiente ficha del tramo.
-* [ ] Si la ficha de reorientación es no doble antecedida por una doble, se conecte con el extremo lateral de esa doble sin solaparse con ella.
-* [ ] Si la ficha de reorientación y su antecedente son ambas **no dobles**, se coloque **al costado** de la última ficha del tramo y **una casilla hacia la línea principal** respecto de su extremo (baja en `UP`, sube en `DOWN`), **sin** conexión en "T".
+* [ ] Si la ficha de reorientación es no doble antecedida por una doble, se conecte de forma **rasante** con el extremo de esa doble por el que termina la cadena (cara superior en `UP → LEFT`, inferior en `DOWN → RIGHT`), alineada y tocando sus 2 unidades, sin solaparse y quedando más lejos de la línea principal.
+* [ ] Si la ficha de reorientación y su antecedente son ambas **no dobles**, se coloque **rasante con el extremo libre** del tramo —arista larga al ras de la punta— **fuera** del tramo (más lejos de la línea principal) y **media casilla hacia la dirección del giro** (`UP → LEFT` izquierda, `DOWN → RIGHT` derecha), **sin** conexión en "T".
 * [ ] Tras la reorientación el extremo ya no vuelva a girar y continúe en horizontal.
-* [ ] La altura del tablero quede acotada (≈ ±3.5 unidades) y no se genere overflow vertical en `div.board`.
+* [ ] La altura del tablero quede acotada (≈ ±9 unidades con las zonas de colocación) y no se genere overflow vertical en `div.board`.
 * [ ] El extremo izquierdo y derecho utilicen direcciones verticales opuestas.
 * [ ] Las fichas dobles sean detectadas correctamente.
 * [ ] Los dobles se coloquen inmediatamente después de la ficha anterior.
@@ -1175,7 +1199,7 @@ La cadena debe construirse de forma **incremental**:
 El renderizado debe usar un **marco fijo por ronda**:
 
 * El **origen** de render es **fijo en el centro del contenedor** durante toda la ronda (el "ancla" visual del tablero).
-* La **escala** (`tileH`) se calcula **una sola vez por ronda** (al iniciar la ronda o al redimensionar la ventana), con ajuste "aspect-fit" sobre la **cabida reservada** de una partida completa (**50×28 unidades**, medida con la norma actual: radio hasta ±22.3 en X y ±11.1 en Y desde el ancla, más zonas de colocación y margen de render).
+* La **escala** (`tileH`) se calcula **una sola vez por ronda** (al iniciar la ronda o al redimensionar la ventana), con ajuste "aspect-fit" sobre la **cabida reservada** de una partida completa (**50×28 unidades**, medida con la norma actual: recorrido hasta ≈ ±24 en X y ±9 en Y desde el ancla, más margen de render).
 * Mientras crece la cadena, la escala y el origen **no se recalculan**: las fichas ya colocadas **conservan exactamente su posición en píxeles** y no se reposicionan en cada jugada (solo las fichas nuevas se añaden en su posición definitiva).
 * El tablero **ocupa todo el alto y ancho posibles sin desbordar en partidas normales**: la cabida reservada cubre el peor caso medido del serpentín; si una partida extrema o una ventana diminuta la exceden, el scroll queda como reserva (no como solución principal), y los límites `MIN_TILE_H`/`MAX_TILE_H` acotan la escala.
 
