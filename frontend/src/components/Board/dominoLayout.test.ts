@@ -547,6 +547,22 @@ test("una doble en la 2ª posición del tramo posterga el giro hasta lograr la s
   assert.equal(recta.orientation, "vertical", "y el tramo sigue hacia arriba");
   const cruce = round.live.placements.find((p) => p.tile.id === "1-3")!;
   assert.equal(cruce.direction, "LEFT", "al final reorienta hacia la izquierda");
+  // El tramo ya tiene una doble y el giro se pospuso más allá de una no doble:
+  // la ficha que reorienta se apoya al ras del costado de esa no doble, a la
+  // altura de su mitad libre (la de arriba en UP), en vez de subir una ficha
+  // más allá de la punta.
+  assertNear(cruce.y, recta.y - 0.5, "no queda a la altura de la mitad superior");
+  assertNear(
+    cruce.y - 0.5,
+    recta.y - 1,
+    "el borde superior no queda al ras del tramo"
+  );
+  assertNear(
+    cruce.x + 1,
+    recta.x - 0.5 - DEFAULT_CONFIG.tileGap,
+    "no queda al costado del antecedente"
+  );
+  assert.ok(cruce.y > recta.y - 1, "quedó una ficha arriba en vez de al ras");
   assert.ok(
     Math.abs(cruce.y) >= DEFAULT_CONFIG.lineSeparation + 2,
     "el tramo crece hasta lograr la separación"

@@ -28,6 +28,12 @@ export interface ChainEnd {
   hasReoriented: boolean;
   /** Fichas colocadas en el tramo vertical desde el cruce (incluido el cruce). */
   segCount: number;
+  /**
+   * El tramo vertical ya contiene una ficha doble. En ese caso la ficha que
+   * reorienta se coloca al ras del costado del antecedente no doble (ver
+   * `reorientGeometry`), no fuera de su punta.
+   */
+  hasDoubleInSegment: boolean;
   turnDirection: TurnDirection;
   connectionSide: ConnectionSide;
   lastPlacementIndex: number;
@@ -212,6 +218,11 @@ interface GeometryInput {
  *   en `DOWN → RIGHT`), a la misma altura que la doble, con su cara de 1 u contra
  *   la cara de 1 u del extremo. Nunca se apoya sobre la cara ancha de la doble:
  *   eso la dejaría "al lado" de ella, no en su extremo.
+ * * Tramo que ya contiene una doble y la reorientación se pospuso más allá de
+ *   una ficha no doble: la ficha nueva se coloca AL RAS del costado del
+ *   antecedente no doble —a la altura de su mitad libre (superior en `UP`,
+ *   inferior en `DOWN`)— en vez de fuera de su punta. Así la línea secundaria
+ *   no gana una altura extra por el tramo que ya abrió la doble.
  *
  * La ficha devuelta ocupa el eje de la línea secundaria que nace aquí (`y` del
  * resultado), eje que todas las fichas posteriores del tramo horizontal
@@ -235,6 +246,13 @@ function reorientGeometry(
     // corta y sigue hacia el lado del giro, sobre el mismo eje que la doble.
     cx = prev!.x + (up ? -1 : 1) * (2 + tileGap);
     cy = prev!.y;
+  } else if (end.hasDoubleInSegment && prev) {
+    // El tramo ya abrió una doble y el giro se pospuso más allá de una no doble:
+    // la ficha se apoya en el costado de esa no doble, a la altura de su mitad
+    // libre, con el borde superior/inferior al ras del tramo. No se sube una
+    // ficha más allá de la punta.
+    cx = prev.x + (up ? -1 : 1) * (1.5 + tileGap);
+    cy = prev.y + (up ? -0.5 : 0.5);
   } else {
     // Rasante con la punta del tramo: el borde de la ficha nueva toca la cara
     // libre del antecedente y la pieza queda un paso más allá, hacia fuera.
@@ -495,6 +513,10 @@ export function placeTile(
     // llega a `reorientLimit` y la línea secundaria deja el hueco mínimo).
     end.segCount += 1;
   }
+  if (end.hasTurned && !end.hasReoriented && isDouble(tile)) {
+    // La doble del tramo condiciona la colocación de la ficha que reorienta.
+    end.hasDoubleInSegment = true;
+  }
   end.direction = g.nextDirection;
   end.connectionValue = g.nextConnectionValue;
   end.connectionSide = CONNECTION_SIDE[g.nextDirection];
@@ -588,6 +610,7 @@ export function createChain(
       hasTurned: false,
       hasReoriented: false,
       segCount: 0,
+      hasDoubleInSegment: false,
       turnDirection: config.leftTurnDirection,
       connectionSide: "RIGHT",
       lastPlacementIndex: -1,
@@ -601,6 +624,7 @@ export function createChain(
       hasTurned: false,
       hasReoriented: false,
       segCount: 0,
+      hasDoubleInSegment: false,
       turnDirection: config.rightTurnDirection,
       connectionSide: "LEFT",
       lastPlacementIndex: -1,
