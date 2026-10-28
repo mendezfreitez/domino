@@ -478,6 +478,130 @@ body.domino-dragging {
   transform-origin: top left;
 }
 
+/* Modal de partida finalizada: equipo y jugadores que alcanzaron el objetivo. */
+.match-end-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  text-align: center;
+}
+
+.match-end-team {
+  margin: 0;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.match-end-team.team-0 {
+  color: var(--accent);
+}
+
+.match-end-team.team-1 {
+  color: var(--turn);
+}
+
+.match-end-score {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.match-end-target {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.match-end-winners {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.4rem;
+}
+
+.match-end-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+}
+
+.match-end-players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.match-end-player {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.match-end-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 999px;
+  flex: none;
+}
+
+.match-end-dot.team-0 {
+  background: var(--accent);
+}
+
+.match-end-dot.team-1 {
+  background: var(--turn);
+}
+
+.match-end-you {
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-dim);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.match-end-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+.match-end-leave {
+  background: transparent;
+  border-color: rgba(255, 107, 107, 0.45);
+  color: var(--danger);
+}
+
+.match-end-leave:hover:not(:disabled) {
+  background: rgba(255, 107, 107, 0.12);
+  border-color: var(--danger);
+}
+
 
 @media (max-width: 640px) {
   .game-table {

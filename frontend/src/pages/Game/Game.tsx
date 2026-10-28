@@ -340,6 +340,28 @@ export function Game({
     (p) => p.id === (result?.blockedById ?? state.blockedById)
   );
 
+  // Fin del match por puntos. Se lee del estado y no solo del evento
+  // `game_finished` para que el modal también aparezca al recargar la página
+  // después de que el equipo ganador alcanzara el objetivo.
+  const matchWinnerTeam = result?.matchWinnerTeam ?? state.matchWinnerTeam ?? null;
+  const isMatchOver = isFinished && matchWinnerTeam !== null;
+  const matchWinnersLabel =
+    matchWinnerTeam === null
+      ? ""
+      : teamName(state.players, matchWinnerTeam) || teamName(matchWinnerTeam);
+  const matchWinners = useMemo(
+    () =>
+      matchWinnerTeam === null
+        ? []
+        : state.players
+            .filter((p) => p.team === matchWinnerTeam)
+            .sort((a, b) => a.position - b.position),
+    [state.players, matchWinnerTeam]
+  );
+  const matchWinnerScore =
+    matchWinnerTeam === null ? 0 : (state.teamScores?.[matchWinnerTeam] ?? 0);
+  const matchTargetScore = state.targetScore ?? 100;
+
   // Cada jugador confirma por separado que quiere la siguiente ronda. El estado
   // llega por broadcast, así que el contador de los que faltan se mantiene vivo
   // en todas las pantallas sin estado local: cuando ya pulsó el último, el
@@ -451,31 +473,87 @@ const estadoPartida = (state: any) => {
             <div className="reveal-overlay" role="dialog" aria-modal="true">
               <div className="reveal-modal">
                 <h2 className="reveal-title">
-                  {finishedReason === "player-left"
-                    ? "Partida terminada"
-                    : isFinished
-                      ? "¡Partida terminada!"
-                      : `Ronda ${state.roundNumber} terminada`}
+                  {isMatchOver
+                    ? "¡Partida finalizada!"
+                    : finishedReason === "player-left"
+                      ? "Partida terminada"
+                      : isFinished
+                        ? "¡Partida terminada!"
+                        : `Ronda ${state.roundNumber} terminada`}
                 </h2>
-                <p className="reveal-subtitle">
-                  {finishedReason === "player-left" ? (
-                    <>Un jugador abandonó la partida. Juego terminado.</>
-                  ) : finishedReason === "blocked" ? (
-                    <>
-                      <strong style={{paddingTop:"4px"}}>{blocker?.name.toUpperCase() ?? "…"}</strong> trancó la{" "}
-                      {isFinished ? "partida" : "ronda"}
-                    </>
-                  ) : (
-                    <div style={{ fontSize: '2rem' }}>
-                      Ganan{" "}
-                      <strong>{teamName(state.players, winnerTeam ?? -1)}</strong>... <br />
-                      <strong style={{marginTop:'4px'}}>{winner?.name.toUpperCase() ?? "…"}</strong> se quedó sin fichas.
+
+                {isMatchOver ? (
+                  <>
+                    <div className="match-end-summary">
+                      <p className={`match-end-team team-${matchWinnerTeam}`}>
+                        Ganan {matchWinnersLabel}
+                      </p>
+                      <p className="match-end-score">
+                        {matchWinnerScore} pts
+                        <span className="match-end-target">
+                          {" "}· objetivo {matchTargetScore}
+                        </span>
+                      </p>
                     </div>
-                  )}
-                </p>
-                <button className="primary" onClick={() => setShowResult(false)} style={{ marginTop: "12px", marginBottom: "4px" }}>
-                  VER CONTEO DE FICHAS
-                </button>
+
+                    <div className="match-end-winners">
+                      <span className="match-end-label">
+                        Jugadores del equipo ganador
+                      </span>
+                      <ul className="match-end-players">
+                        {matchWinners.map((player) => (
+                          <li key={player.id} className="match-end-player">
+                            <span
+                              className={`match-end-dot team-${matchWinnerTeam}`}
+                              aria-hidden="true"
+                            />
+                            <span className="match-end-player-name">
+                              {player.name}
+                            </span>
+                            {player.id === youId && (
+                              <span className="match-end-you">tú</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
+                ) : (
+                  <p className="reveal-subtitle">
+                    {finishedReason === "player-left" ? (
+                      <>Un jugador abandonó la partida. Juego terminado.</>
+                    ) : finishedReason === "blocked" ? (
+                      <>
+                        <strong style={{paddingTop:"4px"}}>{blocker?.name.toUpperCase() ?? "…"}</strong> trancó la{" "}
+                        {isFinished ? "partida" : "ronda"}
+                      </>
+                    ) : (
+                      <div style={{ fontSize: '2rem' }}>
+                        Ganan{" "}
+                        <strong>{teamName(state.players, winnerTeam ?? -1)}</strong>... <br />
+                        <strong style={{marginTop:'4px'}}>{winner?.name.toUpperCase() ?? "…"}</strong> se quedó sin fichas.
+                      </div>
+                    )}
+                  </p>
+                )}
+
+                {isMatchOver ? (
+                  <div className="match-end-actions">
+                    <button
+                      className="primary"
+                      onClick={() => setShowResult(false)}
+                    >
+                      VER CONTEO DE FICHAS
+                    </button>
+                    <button className="match-end-leave" onClick={onLeave}>
+                      SALIR
+                    </button>
+                  </div>
+                ) : (
+                  <button className="primary" onClick={() => setShowResult(false)} style={{ marginTop: "12px", marginBottom: "4px" }}>
+                    VER CONTEO DE FICHAS
+                  </button>
+                )}
               </div>
             </div>
           )}
