@@ -35,10 +35,11 @@ const RESERVED_H_UNITS = 28;
 // no doble; si la anterior es doble, cruza conectada al extremo libre de esa
 // doble). Norma de reorientación: el tramo vertical lleva 2 fichas (cruce + 1
 // recta) y la 3ª intenta volver a orientarse en horizontal (arriba → izquierda,
-// abajo → derecha) solo si no es doble; la conexión es RASANTE, con la arista
-// larga de la ficha al ras del extremo de la última del tramo (o de la doble
-// perpendicular si la antecedente es doble), la pieza quedando hacia fuera, más
-// lejos de la línea principal. NORMA DE SEPARACIÓN: la reorientación solo se
+// abajo → derecha) solo si no es doble; la conexión es rasante contra la punta
+// del tramo y, si la antecedente es una doble perpendicular, se hace por el
+// EXTREMO de la doble hacia el que gira la cadena (izquierdo al subir, derecho
+// al bajar), a su misma altura y sin apoyarse sobre su cara ancha: la pieza
+// queda siempre fuera del extremo. NORMA DE SEPARACIÓN: la reorientación solo se
 // ejecuta si la línea secundaria que nace con ella deja ≥ 2 unidades de hueco
 // (1 ficha) respecto de la línea principal, contando los dobles de ambas
 // líneas; si no, la ficha sigue recta y el giro se pospone. Así el hueco queda

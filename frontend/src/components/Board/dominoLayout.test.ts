@@ -376,10 +376,12 @@ test("replayChain coloca el ancla donde se le pide", () => {
 });
 
 /**
- * El 2º cruce (reorientación) conecta de forma RASANTE: la ficha que gira queda
- * fuera del extremo del tramo (más lejos de la línea principal), con su arista
- * larga al ras de la cara libre del antecedente y media casilla hacia la
- * dirección del giro para cubrir la cara entera.
+ * El 2º cruce (reorientación) conecta por la cara libre del antecedente y la
+ * ficha que gira queda FUERA del extremo, sin acercarse a la línea principal:
+ * con un antecedente no doble va rasante contra su punta y media casilla hacia
+ * el giro; con una doble perpendicular se conecta por el EXTREMO de la doble
+ * hacia el que gira la cadena (izquierdo en `UP → LEFT`, derecho en
+ * `DOWN → RIGHT`), a su misma altura, nunca apoyada sobre su cara ancha.
  */
 function tileOf(id: string): DominoTile {
   const [left, right] = id.split("-").map(Number);
@@ -552,12 +554,12 @@ test("una doble en la 2ª posición del tramo posterga el giro hasta lograr la s
   assertSeparation(round, "doble en la 2ª posición");
 });
 
-test("la ficha reorienta al ras del extremo de la doble antecedente (izquierda)", () => {
+test("la ficha que reorienta se conecta al extremo derecho de la doble antecedente (izquierda)", () => {
   const seq = [
     "4-5", "5-6", "6-0", "0-1", "1-2", "2-2",
     // 7ª = cruce sobre una doble de la principal; 8ª = doble que abre el tramo.
     "2-3", "3-3",
-    // 9ª = la que reorienta con contacto rasante en el extremo de la doble.
+    // 9ª = la que reorienta conectada al extremo derecho de la doble.
     "3-5",
   ];
   const round = playSequence(
@@ -569,12 +571,45 @@ test("la ficha reorienta al ras del extremo de la doble antecedente (izquierda)"
   assert.equal(doble.orientation, "horizontal", "la doble del tramo se dibuja perpendicular");
   assert.equal(cruce.orientation, "horizontal", "la ficha que gira vuelve a horizontal");
   assert.equal(cruce.direction, "RIGHT", "abajo reorienta hacia la derecha");
-  // Rasante con el extremo de la doble: arista superior al ras de su cara
-  // inferior, alineada para tocar los 2 unidades de esa cara.
-  assertNear(cruce.y - 0.5, doble.y + 0.5, "no toca el extremo de la doble por el ras");
-  assertNear(cruce.x, doble.x, "no se alinea con la cara de 2 u de la doble");
-  assert.ok(cruce.y > doble.y, "queda fuera del extremo, más lejos de la principal");
-  assertSeparation(round, "doble antecedente al giro (rasante)");
+  // Extremo a extremo: a la altura de la doble, con su cara de 1 u contra la
+  // cara derecha de la doble. No se apoya sobre la cara ancha.
+  assertNear(cruce.y, doble.y, "no queda a la altura del extremo de la doble");
+  assertNear(
+    cruce.x - 1,
+    doble.x + 1 + DEFAULT_CONFIG.tileGap,
+    "no toca el extremo derecho de la doble"
+  );
+  assert.ok(cruce.x > doble.x, "no queda en el extremo derecho de la doble");
+  assertSeparation(round, "doble antecedente al giro (extremo derecho)");
+});
+
+test("la ficha que reorienta se conecta al extremo izquierdo de la doble antecedente (derecha)", () => {
+  const seq = [
+    "6-0", "0-1", "1-2", "2-3", "3-4", "4-5",
+    // 7ª = cruce (no doble); 8ª = recta del tramo; 9ª = doble que abre el tramo.
+    "5-1", "1-4", "4-4",
+    // 10ª = la que reorienta conectada al extremo izquierdo de la doble.
+    "4-2", "2-6",
+  ];
+  const round = playSequence(
+    tileOf("6-6"),
+    seq.map((id) => ({ tile: tileOf(id), side: "right" as const }))
+  );
+  const doble = round.live.placements.find((p) => p.tile.id === "4-4")!;
+  const cruce = round.live.placements.find((p) => p.tile.id === "4-2")!;
+  assert.equal(doble.orientation, "horizontal", "la doble del tramo se dibuja perpendicular");
+  assert.equal(cruce.orientation, "horizontal", "la ficha que gira vuelve a horizontal");
+  assert.equal(cruce.direction, "LEFT", "arriba reorienta hacia la izquierda");
+  // Extremo a extremo: a la altura de la doble, con su cara de 1 u contra la
+  // cara izquierda de la doble. No se apoya sobre la cara ancha.
+  assertNear(cruce.y, doble.y, "no queda a la altura del extremo de la doble");
+  assertNear(
+    cruce.x + 1,
+    doble.x - 1 - DEFAULT_CONFIG.tileGap,
+    "no toca el extremo izquierdo de la doble"
+  );
+  assert.ok(cruce.x < doble.x, "no queda en el extremo izquierdo de la doble");
+  assertSeparation(round, "doble antecedente al giro (extremo izquierdo)");
 });
 
 test("una partida completa respeta la separación y cabe en la cabida reservada", () => {

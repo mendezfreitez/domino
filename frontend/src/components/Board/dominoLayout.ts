@@ -78,7 +78,8 @@ export interface ChainBuilder {
 }
 
 export const DEFAULT_CONFIG: BoardConfig = {
-  turnLimitPerSide: 7,
+  // 6 fichas contadas en cada lado: la 7ª que se coloque en ese lado cruza.
+  turnLimitPerSide: 6,
   // El tramo vertical intenta el 2º giro con, como mínimo, cruce + 1 recta
   // (2 fichas contadas); la 3ª del tramo es la que reorienta si hay hueco.
   reorientLimit: 1,
@@ -197,20 +198,20 @@ interface GeometryInput {
 /**
  * Geometría de la reorientación (2º giro): el tramo vertical pasa a horizontal.
  *
- * La ficha que gira se conecta de forma RASANTE con el extremo de la última
- * ficha del tramo: su arista larga queda al ras de la cara libre del antecedente
- * (la punta del tramo, o la cara de la doble si el antecedente es una doble
- * perpendicular, dibujada en "T") y la pieza nueva queda FUERA del extremo, más
- * lejos de la línea principal. Es el mismo tipo de contacto que el primer
- * cruce —arista larga contra la cara del extremo— girado 90°, de modo que la
- * conexión sigue siendo de borde a cara, como en todo el dominó:
+ * La ficha que gira se conecta por la cara libre de la última ficha del tramo y
+ * queda FUERA del extremo, sin acercarse a la línea principal:
  *
- * * Antecedente no doble (cara de 1 u): la ficha nueva se desplaza media
- *   casilla hacia la dirección del giro (izquierda en `UP → LEFT`, derecha en
- *   `DOWN → RIGHT`) para cubrir la cara de la punta entera, con la cara
- *   contraria al giro alineada con el costado del tramo.
- * * Antecedente doble perpendicular (cara de 2 u): la ficha nueva se alinea
- *   con la doble y toca su extremo con la arista larga completa.
+ * * Antecedente no doble (cara de punta de 1 u): contacto rasante. La arista
+ *   larga de la ficha nueva se apoya en la cara de la punta —cubriéndola
+ *   entera— y la pieza se desplaza media casilla hacia la dirección del giro
+ *   (izquierda en `UP → LEFT`, derecha en `DOWN → RIGHT`), con la cara contraria
+ *   al giro alineada con el costado del tramo.
+ * * Antecedente doble perpendicular (en un tramo vertical se dibuja horizontal):
+ *   contacto de extremo a extremo. La ficha nueva se coloca en el EXTREMO de la
+ *   doble hacia el que gira la cadena (extremo izquierdo en `UP → LEFT`, derecho
+ *   en `DOWN → RIGHT`), a la misma altura que la doble, con su cara de 1 u contra
+ *   la cara de 1 u del extremo. Nunca se apoya sobre la cara ancha de la doble:
+ *   eso la dejaría "al lado" de ella, no en su extremo.
  *
  * La ficha devuelta ocupa el eje de la línea secundaria que nace aquí (`y` del
  * resultado), eje que todas las fichas posteriores del tramo horizontal
@@ -219,21 +220,27 @@ interface GeometryInput {
 function reorientGeometry(
   end: ChainEnd,
   prev: PositionedTile | null,
-  freeValue: number
+  freeValue: number,
+  tileGap: number
 ): Geometry {
   const up = end.direction === "UP";
   const direction: Direction = up ? "LEFT" : "RIGHT";
-  // Rasante con el extremo: el borde de la ficha nueva toca la cara libre del
-  // antecedente (`end` es ese extremo) y la pieza queda un paso más allá, hacia
-  // fuera de la línea principal.
-  const cy = up ? end.y - 0.5 : end.y - 0.5;
-  const prevWideFace =
-    prev !== null && prev.orientation === "horizontal"; // doble perpendicular en tramo vertical
-  const cx = prevWideFace
-    ? prev!.x
-    : up
-      ? end.x - 0.5
-      : end.x + 0.5;
+  // Una doble perpendicular al tramo vertical se dibuja horizontal: es el único
+  // caso en que el antecedente ocupa 2 u de ancho.
+  const prevWideFace = prev !== null && prev.orientation === "horizontal";
+  let cx: number;
+  let cy: number;
+  if (prevWideFace) {
+    // Conexión por el extremo de la doble: la ficha nueva arranca en su cara
+    // corta y sigue hacia el lado del giro, sobre el mismo eje que la doble.
+    cx = prev!.x + (up ? -1 : 1) * (2 + tileGap);
+    cy = prev!.y;
+  } else {
+    // Rasante con la punta del tramo: el borde de la ficha nueva toca la cara
+    // libre del antecedente y la pieza queda un paso más allá, hacia fuera.
+    cx = up ? end.x - 0.5 : end.x + 0.5;
+    cy = up ? end.y - 0.5 : end.y + 0.5;
+  }
   return {
     x: cx,
     y: cy,
@@ -352,7 +359,12 @@ function computeGeometry(
     !input.isDoubleTile;
 
   if (wantReorient) {
-    const candidate = reorientGeometry(end, prev, input.freeValue);
+    const candidate = reorientGeometry(
+      end,
+      prev,
+      input.freeValue,
+      config.tileGap
+    );
     const clear =
       Math.abs(candidate.y) - LINE_BAND_HALF - LINE_BAND_HALF;
     if (clear >= config.lineSeparation) return candidate;
