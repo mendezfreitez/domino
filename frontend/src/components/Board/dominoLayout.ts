@@ -18,6 +18,16 @@ export interface PositionedTile {
   displayRight: number;
 }
 
+/** Previsión de la siguiente ficha sin mutar la cadena. */
+export interface PredictedPlacement {
+  x: number;
+  y: number;
+  orientation: Orientation;
+  connectionSide: ConnectionSide;
+  displayLeft: number;
+  displayRight: number;
+}
+
 export interface ChainEnd {
   x: number;
   y: number;
@@ -528,11 +538,21 @@ export function placeTile(
   return placed;
 }
 
+/**
+ * Geometría de la siguiente ficha en un extremo.
+ *
+ * Sin `tile` devuelve solo la zona genérica de colocación (la que usa el
+ * tablero para calcular bounds y dibujar el hueco). Con `tile`, usa la ficha
+ * real —dobles incluidos— y devuelve también la orientación y las caras que
+ * tendrá al soltarse, para que el fantasma del arrastre pueda mostrar ya la
+ * cara que conecta con la cadena.
+ */
 export function predictNextPlacement(
   side: Side,
   layout: ChainLayout,
-  config: BoardConfig = DEFAULT_CONFIG
-): { x: number; y: number; orientation: Orientation } | null {
+  config: BoardConfig = DEFAULT_CONFIG,
+  tile?: DominoTile
+): PredictedPlacement | null {
   const end = side === "left" ? layout.leftEnd : layout.rightEnd;
   if (!end) return null;
   const prevIdx = end.lastPlacementIndex;
@@ -540,24 +560,70 @@ export function predictNextPlacement(
     prevIdx >= 0 && prevIdx < layout.placements.length
       ? layout.placements[prevIdx]
       : null;
-  const dummy: DominoTile = {
-    id: "__drop",
-    left: end.connectionValue,
-    right: end.connectionValue,
-  };
+  const connValue = end.connectionValue;
+  const actual: DominoTile =
+    tile ??
+    {
+      id: "__drop",
+      left: connValue,
+      right: connValue,
+    };
+  const freeValue =
+    tile === undefined
+      ? connValue
+      : tile.left === connValue
+        ? tile.right
+        : tile.left;
   const g = computeGeometry(
     {
-      tile: dummy,
-      isDoubleTile: false,
-      connValue: end.connectionValue,
-      freeValue: end.connectionValue,
+      tile: actual,
+      // La ficha ficticia de la zona se trata como no doble: la zona es la
+      // misma para cualquier ficha y no debe cambiar de orientación por ella.
+      isDoubleTile: tile === undefined ? false : isDouble(tile),
+      connValue,
+      freeValue,
     },
     end,
     end.countFromAnchor,
     config,
     prev
   );
-  return { x: g.x, y: g.y, orientation: g.orientation };
+  const placed = buildPositionedTile(actual, g, connValue);
+  return {
+    x: g.x,
+    y: g.y,
+    orientation: g.orientation,
+    connectionSide: g.connectionSide,
+    displayLeft: placed.displayLeft,
+    displayRight: placed.displayRight,
+  };
+}
+
+/**
+ * Adapta una previsión al modo móvil rotado 90°.
+ *
+ * La mesa se dibuja girada un cuarto de vuelta, así que el fantasma debe usar
+ * la orientación equivalente en pantalla y el orden de caras que deje la cara
+ * que conecta en el mismo extremo visual que tendrá al colocarse.
+ */
+export function toRotatedView(
+  orientation: Orientation,
+  displayLeft: number,
+  displayRight: number,
+  rotated: boolean
+): { orientation: Orientation; displayLeft: number; displayRight: number } {
+  if (!rotated) return { orientation, displayLeft, displayRight };
+  if (orientation === "horizontal") {
+    // horizontal lógica -> vertical en pantalla; izquierda -> arriba.
+    return { orientation: "vertical", displayLeft, displayRight };
+  }
+  // vertical lógica -> horizontal en pantalla; arriba -> derecha, abajo ->
+  // izquierda, así que se intercambian las caras para conservar el sentido.
+  return {
+    orientation: "horizontal",
+    displayLeft: displayRight,
+    displayRight: displayLeft,
+  };
 }
 
 export function builderToLayout(builder: ChainBuilder): ChainLayout {

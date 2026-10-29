@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { Board } from "../../components/Board/Board";
+import { toRotatedView } from "../../components/Board/dominoLayout";
+import type { Orientation } from "../../components/Board/dominoLayout";
 import { Player } from "../../components/Player/Player";
 import { PlayerHand } from "../../components/PlayerHand/PlayerHand";
 import { DominoTile } from "../../components/DominoTile/DominoTile";
@@ -25,6 +27,38 @@ function distanceToRect(
   const dx = Math.max(rect.left - x, 0, x - rect.right);
   const dy = Math.max(rect.top - y, 0, y - rect.bottom);
   return Math.hypot(dx, dy);
+}
+
+interface DropZone {
+  side: "left" | "right";
+  element: HTMLElement;
+}
+
+/**
+ * Zona de colocación realmente visible bajo el punto.
+ *
+ * Usa el hit-test del navegador para respetar el recorte del tablero y los
+ * elementos que puedan taparla; no aplica el margen de tolerancia que se usa
+ * al soltar (hasta cuatro anchos de zona), para que el fantasma no gire antes
+ * de entrar en el hueco.
+ */
+function findDropZone(x: number, y: number): DropZone | null {
+  const hit = document.elementFromPoint(x, y);
+  const element =
+    hit instanceof Element
+      ? hit.closest<HTMLElement>("[data-drop-side]")
+      : null;
+  if (!element) return null;
+  const side = element.getAttribute("data-drop-side");
+  if (side !== "left" && side !== "right") return null;
+  return { side, element };
+}
+
+interface DragPreview {
+  side: "left" | "right";
+  orientation: Orientation;
+  displayLeft: number;
+  displayRight: number;
 }
 
 /**
@@ -75,6 +109,7 @@ export function Game({
   const [dragGhost, setDragGhost] = useState<{ x: number; y: number } | null>(
     null
   );
+  const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
   const [showInvalidDrop, setShowInvalidDrop] = useState<boolean>(false);
   const [showResult, setShowResult] = useState<boolean>(true);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -132,6 +167,7 @@ export function Game({
   const handleDrop = (tileId: string, side: "left" | "right") => {
     const tile = state.yourHand.find((t) => t.id === tileId);
     setDragTileId(null);
+    setDragPreview(null);
     if (!tile) {
       setShowInvalidDrop(true);
       return;
@@ -177,6 +213,53 @@ export function Game({
     const onMove = (event: globalThis.PointerEvent) => {
       event.preventDefault();
       setDragGhost({ x: event.clientX, y: event.clientY });
+
+      const current = latestDrag.current;
+      const tile = current.tileId
+        ? current.yourHand.find((t) => t.id === current.tileId) ?? null
+        : null;
+      const zone = findDropZone(event.clientX, event.clientY);
+      let next: DragPreview | null = null;
+      if (zone && tile) {
+        const connectionValue =
+          zone.side === "left" ? current.boardLeft : current.boardRight;
+        const valid =
+          connectionValue === null ||
+          tile.left === connectionValue ||
+          tile.right === connectionValue;
+        const orientation = zone.element.getAttribute("data-drop-orientation");
+        const displayLeft = zone.element.getAttribute("data-drop-display-left");
+        const displayRight = zone.element.getAttribute(
+          "data-drop-display-right"
+        );
+        if (
+          valid &&
+          (orientation === "horizontal" || orientation === "vertical") &&
+          displayLeft !== null &&
+          displayRight !== null
+        ) {
+          next = {
+            side: zone.side,
+            orientation,
+            displayLeft: Number(displayLeft),
+            displayRight: Number(displayRight),
+          };
+        }
+      }
+      setDragPreview((prev) => {
+        if (prev === null && next === null) return prev;
+        if (
+          prev !== null &&
+          next !== null &&
+          prev.side === next.side &&
+          prev.orientation === next.orientation &&
+          prev.displayLeft === next.displayLeft &&
+          prev.displayRight === next.displayRight
+        ) {
+          return prev;
+        }
+        return next;
+      });
     };
 
     const onUp = (event: globalThis.PointerEvent) => {
@@ -236,11 +319,13 @@ export function Game({
       }
       setDragTileId(null);
       setDragGhost(null);
+      setDragPreview(null);
     };
 
     const onLeave = () => {
       setDragTileId(null);
       setDragGhost(null);
+      setDragPreview(null);
     };
 
     window.addEventListener("pointermove", onMove);
@@ -265,6 +350,7 @@ export function Game({
     event.preventDefault();
     setShowInvalidDrop(false);
     setDragTileId(tileId);
+    setDragPreview(null);
     setDragGhost({ x: event.clientX, y: event.clientY });
   };
 
@@ -279,6 +365,30 @@ export function Game({
     (boardRight === null ||
       dragTile.left === boardRight ||
       dragTile.right === boardRight);
+
+  // El fantasma usa la orientación prevista por el tablero cuando el puntero
+  // está dentro de una zona válida. En móvil rotado se adapta a la mesa para
+  // que la cara que conecta siga apuntando al extremo correcto en pantalla.
+  const ghostView = useMemo(() => {
+    if (!dragTile) return null;
+    if (!dragPreview) {
+      return { tile: dragTile, orientation: "vertical" as const };
+    }
+    const view = toRotatedView(
+      dragPreview.orientation,
+      dragPreview.displayLeft,
+      dragPreview.displayRight,
+      rotated
+    );
+    return {
+      tile: {
+        id: dragTile.id,
+        left: view.displayLeft,
+        right: view.displayRight,
+      },
+      orientation: view.orientation,
+    };
+  }, [dragTile, dragPreview, rotated]);
 
   const currentPlayer = state.players.find((p) => p.id === state.currentPlayer);
   const winner = state.players.find((p) => p.id === (result?.winnerId ?? state.winnerId));
@@ -461,6 +571,7 @@ const estadoPartida = (state: any) => {
                 tiles={state.board}
                 anchorId={state.boardAnchorId}
                 dragTileId={dragTileId}
+                dragTile={dragTile}
                 dropLeftValid={dropLeftValid}
                 dropRightValid={dropRightValid}
                 onDropTile={handleDrop}
@@ -685,8 +796,7 @@ const estadoPartida = (state: any) => {
         </div>
       </div>
 
-      {dragTileId &&
-        dragTile &&
+      {ghostView &&
         dragGhost &&
         createPortal(
           <div
@@ -700,7 +810,11 @@ const estadoPartida = (state: any) => {
             }
             aria-hidden="true"
           >
-            <DominoTile tile={dragTile} size="hand" orientation="vertical" />
+            <DominoTile
+              tile={ghostView.tile}
+              size="hand"
+              orientation={ghostView.orientation}
+            />
           </div>,
           // El fantasma vive en `body` (portal), no dentro de la mesa: cuando
           // la mesa está rotada por transform, un `position: fixed` hijo de un

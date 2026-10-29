@@ -112,6 +112,8 @@ interface BoardProps {
    */
   anchorId: string | null;
   dragTileId: string | null;
+  /** Ficha que se está arrastrando, para previsualizar su orientación al soltar. */
+  dragTile: Tile | null;
   dropLeftValid: boolean;
   dropRightValid: boolean;
   onDropTile: (tileId: string, side: "left" | "right") => void;
@@ -177,6 +179,7 @@ export function Board({
   tiles,
   anchorId,
   dragTileId,
+  dragTile,
   dropLeftValid,
   dropRightValid,
   onDropTile,
@@ -285,6 +288,24 @@ export function Board({
   const rightZone = useMemo(
     () => predictNextPlacement("right", layout, DEFAULT_CONFIG),
     [layout]
+  );
+
+  // Previsión con la ficha REAL que se arrastra. La zona de colocación se queda
+  // genérica (sin ficha) para no mover el hueco al empezar el gesto; lo que se
+  // publica aquí es solo la orientación y las caras que tendrá el fantasma.
+  const leftPreview = useMemo(
+    () =>
+      dragTile
+        ? predictNextPlacement("left", layout, DEFAULT_CONFIG, dragTile)
+        : null,
+    [dragTile, layout]
+  );
+  const rightPreview = useMemo(
+    () =>
+      dragTile
+        ? predictNextPlacement("right", layout, DEFAULT_CONFIG, dragTile)
+        : null,
+    [dragTile, layout]
   );
 
   // Los bounds de fichas + zonas determinan el tamaño del lienzo y las celdas
@@ -443,6 +464,9 @@ export function Board({
             style={zoneStyle(leftZone)}
             aria-label="Colocar ficha a la izquierda"
             data-drop-side="left"
+            data-drop-orientation={leftPreview?.orientation}
+            data-drop-display-left={leftPreview?.displayLeft}
+            data-drop-display-right={leftPreview?.displayRight}
             {...dropHandlers("left", onDropTile)}
           />
         ) : null}
@@ -473,6 +497,9 @@ export function Board({
             style={zoneStyle(rightZone)}
             aria-label="Colocar ficha a la derecha"
             data-drop-side="right"
+            data-drop-orientation={rightPreview?.orientation}
+            data-drop-display-left={rightPreview?.displayLeft}
+            data-drop-display-right={rightPreview?.displayRight}
             {...dropHandlers("right", onDropTile)}
           />
         ) : null}

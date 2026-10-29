@@ -204,6 +204,19 @@ Como la línea principal es muy larga y la secundaria corta, el hueco solo se mi
 
 ---
 
+## 5.4 Previsualización durante el arrastre
+
+Mientras el jugador arrastra una ficha de la mano, el fantasma debe mostrar **ya** la orientación y las caras que tendrá al soltarla, no esperar a que termine el gesto:
+
+* `predictNextPlacement(side, layout, config, tile)` recibe la ficha real y devuelve, además de la posición, `orientation`, `connectionSide`, `displayLeft` y `displayRight`.
+* La ficha ficticia que se usa para dibujar el hueco de colocación se sigue tratando como **no doble**; la previsión con la ficha real sí distingue los dobles, porque su orientación puede ser perpendicular a la cadena.
+* El fantasma se orienta con `orientation` y ordena sus caras con `displayLeft` / `displayRight`: la cara que conecta (`connectionSide`) queda mirando al extremo de la cadena.
+* El cambio se activa al entrar en el **rectángulo visible** de una zona válida. Si la zona no admite la ficha, o el puntero sale de ella, el fantasma vuelve a la orientación normal de la mano.
+* En el **modo móvil rotado** (la mesa se dibuja girada 90° por CSS) se usa `toRotatedView`: la orientación equivalente en pantalla y el orden de caras que conserva la cara que conecta en el mismo extremo visual.
+* El fantasma es solo una representación: **nunca** se modifican los valores lógicos de la ficha de la mano.
+
+---
+
 # 6. Regla de dirección de los cruces
 
 Los dos extremos de la cadena deben crecer en direcciones verticales opuestas.

@@ -6,8 +6,10 @@ import {
   createChain,
   findAnchorIndex,
   placeTile,
+  predictNextPlacement,
   replayBoardLayout,
   replayChain,
+  toRotatedView,
   DEFAULT_CONFIG,
 } from "./dominoLayout.ts";
 import type {
@@ -643,4 +645,123 @@ test("una partida completa respeta la separación y cabe en la cabida reservada"
     round.live.minY >= -14 && round.live.maxY <= 14,
     `se sale de la cabida reservada en Y: [${round.live.minY}, ${round.live.maxY}]`
   );
+});
+
+test("la previsión con la ficha real coincide con la colocación", () => {
+  const round = playSequence(tileOf("6-6"), [
+    { tile: tileOf("6-0"), side: "right" },
+    { tile: tileOf("0-4"), side: "right" },
+    { tile: tileOf("6-2"), side: "left" },
+  ]);
+  const freshBuilder = () =>
+    replayChain(round.board, findAnchorIndex(round.board, round.anchorId));
+
+  for (const side of ["left", "right"] as const) {
+    const initial = freshBuilder();
+    const layout = builderToLayout(initial);
+    const end = side === "left" ? layout.leftEnd! : layout.rightEnd!;
+    const conn = end.connectionValue;
+    const other = conn === 0 ? 1 : 0;
+    const tiles: DominoTile[] = [
+      { id: `${conn}-${other}`, left: conn, right: other },
+      // La doble no se previsualiza con la ficha ficticia: su orientación es
+      // perpendicular a la cadena, así que este caso garantiza que se usa la
+      // ficha real.
+      { id: `${conn}-${conn}`, left: conn, right: conn },
+    ];
+
+    for (const tile of tiles) {
+      const builder = freshBuilder();
+      const current = builderToLayout(builder);
+      const predicted = predictNextPlacement(
+        side,
+        current,
+        DEFAULT_CONFIG,
+        tile
+      );
+      const placed = placeTile(tile, side, builder, DEFAULT_CONFIG);
+      assert.ok(predicted, `sin previsión para ${tile.id} a la ${side}`);
+      assert.equal(predicted.orientation, placed.orientation);
+      assert.equal(predicted.connectionSide, placed.connectionSide);
+      assert.equal(predicted.displayLeft, placed.displayLeft);
+      assert.equal(predicted.displayRight, placed.displayRight);
+    }
+  }
+});
+
+test("la previsión en el tramo vertical usa la ficha real", () => {
+  // La 7ª colocación de la derecha es el cruce; la siguiente doble abre el
+  // tramo vertical y debe preverse perpendicular, no como una recta.
+  const round = playSequence(
+    tileOf("6-6"),
+    REORIENT_SEQ.slice(0, 7).map((id) => ({
+      tile: tileOf(id),
+      side: "right" as const,
+    }))
+  );
+  const builder = replayChain(
+    round.board,
+    findAnchorIndex(round.board, round.anchorId)
+  );
+  const layout = builderToLayout(builder);
+  const end = layout.rightEnd!;
+  assert.ok(end.hasTurned, "el tramo derecho debería haber cruzado");
+  const conn = end.connectionValue;
+  const double: DominoTile = { id: `${conn}-${conn}`, left: conn, right: conn };
+  const predicted = predictNextPlacement(
+    "right",
+    layout,
+    DEFAULT_CONFIG,
+    double
+  );
+  const placed = placeTile(double, "right", builder, DEFAULT_CONFIG);
+  assert.ok(predicted);
+  assert.equal(predicted.orientation, "horizontal");
+  assert.equal(predicted.orientation, placed.orientation);
+  assert.equal(predicted.displayLeft, placed.displayLeft);
+  assert.equal(predicted.displayRight, placed.displayRight);
+});
+
+test("la previsión deja la cara que conecta mirando al tablero", () => {
+  const layout = builderToLayout(createChain(tileOf("4-4"), DEFAULT_CONFIG));
+
+  const left = predictNextPlacement(
+    "left",
+    layout,
+    DEFAULT_CONFIG,
+    tileOf("0-4")
+  );
+  assert.ok(left);
+  assert.equal(left.connectionSide, "RIGHT");
+  assert.equal(left.displayLeft, 0);
+  assert.equal(left.displayRight, 4);
+
+  const right = predictNextPlacement(
+    "right",
+    layout,
+    DEFAULT_CONFIG,
+    tileOf("4-0")
+  );
+  assert.ok(right);
+  assert.equal(right.connectionSide, "LEFT");
+  assert.equal(right.displayLeft, 4);
+  assert.equal(right.displayRight, 0);
+});
+
+test("el modo rotado conserva la cara que conecta en el mismo extremo visual", () => {
+  assert.deepEqual(toRotatedView("horizontal", 0, 4, false), {
+    orientation: "horizontal",
+    displayLeft: 0,
+    displayRight: 4,
+  });
+  assert.deepEqual(toRotatedView("horizontal", 0, 4, true), {
+    orientation: "vertical",
+    displayLeft: 0,
+    displayRight: 4,
+  });
+  assert.deepEqual(toRotatedView("vertical", 0, 4, true), {
+    orientation: "horizontal",
+    displayLeft: 4,
+    displayRight: 0,
+  });
 });
