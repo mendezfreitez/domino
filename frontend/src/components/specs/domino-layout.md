@@ -211,7 +211,7 @@ Mientras el jugador arrastra una ficha de la mano, el fantasma debe mostrar **ya
 * `predictNextPlacement(side, layout, config, tile)` recibe la ficha real y devuelve, además de la posición, `orientation`, `connectionSide`, `displayLeft` y `displayRight`.
 * La ficha ficticia que se usa para dibujar el hueco de colocación se sigue tratando como **no doble**; la previsión con la ficha real sí distingue los dobles, porque su orientación puede ser perpendicular a la cadena.
 * El fantasma se orienta con `orientation` y ordena sus caras con `displayLeft` / `displayRight`: la cara que conecta (`connectionSide`) queda mirando al extremo de la cadena.
-* El cambio se activa al entrar en el **rectángulo visible** de una zona válida. Si la zona no admite la ficha, o el puntero sale de ella, el fantasma vuelve a la orientación normal de la mano.
+* El cambio se activa al entrar en el **área soltable** de una zona válida: la misma que se usa al soltar (la zona visible o la más cercana dentro de la tolerancia de cuatro anchos). Si la zona no admite la ficha, o el puntero sale de esa área, el fantasma vuelve a la orientación normal de la mano.
 * En el **modo móvil rotado** (la mesa se dibuja girada 90° por CSS) se usa `toRotatedView`: la orientación equivalente en pantalla y el orden de caras que conserva la cara que conecta en el mismo extremo visual.
 * El fantasma es solo una representación: **nunca** se modifican los valores lógicos de la ficha de la mano.
 

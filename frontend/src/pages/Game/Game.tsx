@@ -35,23 +35,42 @@ interface DropZone {
 }
 
 /**
- * Zona de colocación realmente visible bajo el punto.
- *
- * Usa el hit-test del navegador para respetar el recorte del tablero y los
- * elementos que puedan taparla; no aplica el margen de tolerancia que se usa
- * al soltar (hasta cuatro anchos de zona), para que el fantasma no gire antes
- * de entrar en el hueco.
+ * Zona de colocación bajo el punto, con la misma tolerancia que se usa al
+ * soltar: primero respeta el hit-test real y, si no hay zona debajo, acepta la
+ * más cercana dentro de cuatro anchos de zona. Así el fantasma se orienta en
+ * cuanto el gesto cae en el área soltable, no solo al entrar en el rectángulo
+ * visible de la zona.
  */
 function findDropZone(x: number, y: number): DropZone | null {
   const hit = document.elementFromPoint(x, y);
-  const element =
+  const direct =
     hit instanceof Element
       ? hit.closest<HTMLElement>("[data-drop-side]")
       : null;
-  if (!element) return null;
-  const side = element.getAttribute("data-drop-side");
+  if (direct) {
+    const side = direct.getAttribute("data-drop-side");
+    if (side === "left" || side === "right") {
+      return { side, element: direct };
+    }
+  }
+
+  let best: HTMLElement | null = null;
+  let bestDist = Infinity;
+  for (const candidate of document.querySelectorAll<HTMLElement>(
+    "[data-drop-side]"
+  )) {
+    const rect = candidate.getBoundingClientRect();
+    const dist = distanceToRect(x, y, rect);
+    // 4 × rect.width = cuatro anchos de zona en píxeles reales.
+    if (dist <= rect.width * 4 && dist < bestDist) {
+      bestDist = dist;
+      best = candidate;
+    }
+  }
+  if (!best) return null;
+  const side = best.getAttribute("data-drop-side");
   if (side !== "left" && side !== "right") return null;
-  return { side, element };
+  return { side, element: best };
 }
 
 interface DragPreview {
@@ -265,41 +284,10 @@ export function Game({
     const onUp = (event: globalThis.PointerEvent) => {
       const current = latestDrag.current;
       const tileId = current.tileId;
-      const el = document.elementFromPoint(event.clientX, event.clientY);
-      let zone =
-        el instanceof Element ? el.closest("[data-drop-side]") : null;
-
-      // Si el puntero no está exactamente sobre una zona, se acepta la zona
-      // más cercana siempre que esté a menos de cuatro longitudes de ficha (el
-      // ancho de la zona ya viene escalado por el zoom del tablero).
-      if (!zone) {
-        let best: Element | null = null;
-        let bestDist = Infinity;
-        for (const candidate of document.querySelectorAll(
-          "[data-drop-side]"
-        )) {
-          const rect = candidate.getBoundingClientRect();
-          const dist = distanceToRect(
-            event.clientX,
-            event.clientY,
-            rect
-          );
-          // 4 × rect.width = cuatro fichas de largo en píxeles reales.
-          if (dist <= rect.width * 4 && dist < bestDist) {
-            bestDist = dist;
-            best = candidate;
-          }
-        }
-        zone =
-          best instanceof Element
-            ? best.closest("[data-drop-side]")
-            : null;
-      }
+      const zone = findDropZone(event.clientX, event.clientY);
 
       if (zone && tileId) {
-        const side = zone.getAttribute("data-drop-side") as
-          | "left"
-          | "right";
+        const side = zone.side;
         const tile = current.yourHand.find((t) => t.id === tileId);
         if (tile) {
           const valid =
@@ -367,8 +355,8 @@ export function Game({
       dragTile.right === boardRight);
 
   // El fantasma usa la orientación prevista por el tablero cuando el puntero
-  // está dentro de una zona válida. En móvil rotado se adapta a la mesa para
-  // que la cara que conecta siga apuntando al extremo correcto en pantalla.
+  // está dentro del área soltable de una zona válida. En móvil rotado se adapta
+  // a la mesa para que la cara que conecta siga apuntando al extremo correcto.
   const ghostView = useMemo(() => {
     if (!dragTile) return null;
     if (!dragPreview) {
