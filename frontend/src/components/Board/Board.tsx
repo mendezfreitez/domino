@@ -14,7 +14,7 @@ import {
 import type { ChainBuilder, ChainLayout, Side } from "./dominoLayout";
 import "./Board.css";
 
-const MIN_TILE_H = 51;
+const MIN_TILE_H = 60; //TAMANO DE LAS FICHAS EN EL TABLERO
 const MAX_TILE_H = 108;
 const DEFAULT_TILE_H = 64;
 const BOARD_PAD_X = 16;
