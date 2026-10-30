@@ -16,6 +16,8 @@ const DESIGN_WIDTH = 1920;
 const DESIGN_HEIGHT = 1080;
 const ZOOM = 1.03;
 const MIN_SCALE = 0.25;
+/** Duración de la vuelta del fantasma a la mano (algo mayor que la transición CSS). */
+const DRAG_RETURN_MS = 240;
 
 // Distancia de un punto (px de viewport) a un rectángulo: 0 si está dentro,
 // si no, distancia al borde o esquina más cercana.
@@ -129,10 +131,15 @@ export function Game({
     null
   );
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
-  const [showInvalidDrop, setShowInvalidDrop] = useState<boolean>(false);
+  const [dragReturning, setDragReturning] = useState<boolean>(false);
   const [showResult, setShowResult] = useState<boolean>(true);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState<number>(1);
+  const scaleRef = useRef<number>(scale);
+  scaleRef.current = scale;
+  /** Evita que los pointermove sigan moviendo el fantasma mientras vuelve. */
+  const dragReturningRef = useRef<boolean>(false);
+  const returnTimerRef = useRef<number | null>(null);
   const rotated = useRotatedMode();
 
   useLayoutEffect(() => {
@@ -154,6 +161,15 @@ export function Game({
     window.addEventListener("resize", recompute);
     return () => window.removeEventListener("resize", recompute);
   }, [rotated]);
+
+  useEffect(
+    () => () => {
+      if (returnTimerRef.current !== null) {
+        window.clearTimeout(returnTimerRef.current);
+      }
+    },
+    []
+  );
 
   const youId = state.yourPlayerId;
   const isYourTurn =
@@ -183,14 +199,21 @@ export function Game({
     return ids;
   }, [state.yourHand, state.status, boardLeft, boardRight]);
 
+  const cancelReturnAnimation = () => {
+    if (returnTimerRef.current !== null) {
+      window.clearTimeout(returnTimerRef.current);
+      returnTimerRef.current = null;
+    }
+    dragReturningRef.current = false;
+    setDragReturning(false);
+  };
+
   const handleDrop = (tileId: string, side: "left" | "right") => {
     const tile = state.yourHand.find((t) => t.id === tileId);
+    cancelReturnAnimation();
     setDragTileId(null);
     setDragPreview(null);
-    if (!tile) {
-      setShowInvalidDrop(true);
-      return;
-    }
+    if (!tile) return;
     const valid =
       side === "left"
         ? boardLeft === null ||
@@ -199,11 +222,7 @@ export function Game({
         : boardRight === null ||
         tile.left === boardRight ||
         tile.right === boardRight;
-    if (!valid) {
-      setShowInvalidDrop(true);
-      return;
-    }
-    setShowInvalidDrop(false);
+    if (!valid) return;
     onPlayTile(tileId, side);
   };
 
@@ -230,6 +249,7 @@ export function Game({
     document.body.classList.add("domino-dragging");
 
     const onMove = (event: globalThis.PointerEvent) => {
+      if (dragReturningRef.current) return;
       event.preventDefault();
       setDragGhost({ x: event.clientX, y: event.clientY });
 
@@ -281,7 +301,54 @@ export function Game({
       });
     };
 
+    const finishDrag = () => {
+      dragReturningRef.current = false;
+      setDragTileId(null);
+      setDragGhost(null);
+      setDragPreview(null);
+      setDragReturning(false);
+    };
+
+    /**
+     * Colocación rechazada: en vez de un modal, el fantasma vuelve deslizándose
+     * hasta la ficha oculta de la mano. Cuando llega, se revela la ficha real.
+     */
+    const returnToHand = () => {
+      const handTile = document.querySelector<HTMLElement>(
+        ".player-hand .tile-dragging"
+      );
+      if (!handTile) {
+        finishDrag();
+        return;
+      }
+      const rect = handTile.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        finishDrag();
+        return;
+      }
+
+      // El fantasma usa translate(-50%, -85%) respecto de su centro: su centro
+      // visual queda 0.35 veces su altura por encima del `top` de la caja.
+      const s = Math.max(scaleRef.current, 0.01);
+      const targetX = rect.left + rect.width / 2;
+      const targetY = rect.top + rect.height / 2 + 0.35 * (rect.height / s);
+
+      dragReturningRef.current = true;
+      setDragPreview(null);
+      setDragReturning(true);
+      setDragGhost({ x: targetX, y: targetY });
+
+      if (returnTimerRef.current !== null) {
+        window.clearTimeout(returnTimerRef.current);
+      }
+      returnTimerRef.current = window.setTimeout(() => {
+        returnTimerRef.current = null;
+        finishDrag();
+      }, DRAG_RETURN_MS);
+    };
+
     const onUp = (event: globalThis.PointerEvent) => {
+      if (dragReturningRef.current) return;
       const current = latestDrag.current;
       const tileId = current.tileId;
       const zone = findDropZone(event.clientX, event.clientY);
@@ -300,20 +367,18 @@ export function Game({
               tile.right === current.boardRight;
           if (valid) {
             current.onPlayTile(tileId, side);
-          } else {
-            setShowInvalidDrop(true);
+            finishDrag();
+            return;
           }
         }
       }
-      setDragTileId(null);
-      setDragGhost(null);
-      setDragPreview(null);
+
+      returnToHand();
     };
 
     const onLeave = () => {
-      setDragTileId(null);
-      setDragGhost(null);
-      setDragPreview(null);
+      if (dragReturningRef.current) return;
+      finishDrag();
     };
 
     window.addEventListener("pointermove", onMove);
@@ -336,7 +401,7 @@ export function Game({
     if (event.button !== 0) return;
     if (state.status !== "playing" || !isYourTurn) return;
     event.preventDefault();
-    setShowInvalidDrop(false);
+    cancelReturnAnimation();
     setDragTileId(tileId);
     setDragPreview(null);
     setDragGhost({ x: event.clientX, y: event.clientY });
@@ -360,6 +425,25 @@ export function Game({
   const ghostView = useMemo(() => {
     if (!dragTile) return null;
     if (!dragPreview) {
+      if (dragReturning) {
+        // Al volver a la mano, el fantasma debe tener la misma orientación en
+        // pantalla que la ficha real, que vive dentro de la mesa (y de su
+        // posible rotación de 90°).
+        const view = toRotatedView(
+          "vertical",
+          dragTile.left,
+          dragTile.right,
+          rotated
+        );
+        return {
+          tile: {
+            id: dragTile.id,
+            left: view.displayLeft,
+            right: view.displayRight,
+          },
+          orientation: view.orientation,
+        };
+      }
       return { tile: dragTile, orientation: "vertical" as const };
     }
     const view = toRotatedView(
@@ -376,7 +460,7 @@ export function Game({
       },
       orientation: view.orientation,
     };
-  }, [dragTile, dragPreview, rotated]);
+  }, [dragTile, dragPreview, dragReturning, rotated]);
 
   const currentPlayer = state.players.find((p) => p.id === state.currentPlayer);
   const winner = state.players.find((p) => p.id === (result?.winnerId ?? state.winnerId));
@@ -767,20 +851,6 @@ const estadoPartida = (state: any) => {
             </div>
           )}
 
-          {showInvalidDrop && (
-            <div className="pass-modal-overlay">
-              <div className="pass-modal">
-                <p>Esa ficha no va en ese lado del tablero.</p>
-                <button
-                  className="primary"
-                  style={{ padding: "6px 18px" }}
-                  onClick={() => setShowInvalidDrop(false)}
-                >
-                  Entendido
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -788,7 +858,7 @@ const estadoPartida = (state: any) => {
         dragGhost &&
         createPortal(
           <div
-            className="drag-ghost"
+            className={`drag-ghost${dragReturning ? " drag-ghost-returning" : ""}`}
             style={
               {
                 left: dragGhost.x,

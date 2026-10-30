@@ -213,6 +213,7 @@ Mientras el jugador arrastra una ficha de la mano, el fantasma debe mostrar **ya
 * El fantasma se orienta con `orientation` y ordena sus caras con `displayLeft` / `displayRight`: la cara que conecta (`connectionSide`) queda mirando al extremo de la cadena.
 * El cambio se activa al entrar en el **área soltable** de una zona válida: la misma que se usa al soltar (la zona visible o la más cercana dentro de la tolerancia de cuatro anchos). Si la zona no admite la ficha, o el puntero sale de esa área, el fantasma vuelve a la orientación normal de la mano.
 * En el **modo móvil rotado** (la mesa se dibuja girada 90° por CSS) se usa `toRotatedView`: la orientación equivalente en pantalla y el orden de caras que conserva la cara que conecta en el mismo extremo visual.
+* Si se suelta fuera de una zona válida, o en un lado que no admite la ficha, no se muestra ningún modal: el fantasma vuelve deslizándose hasta la ficha oculta de la mano y, al llegar, se revela la ficha real. En móvil rotado la vuelta usa la orientación en pantalla de la mano.
 * El fantasma es solo una representación: **nunca** se modifican los valores lógicos de la ficha de la mano.
 
 ---

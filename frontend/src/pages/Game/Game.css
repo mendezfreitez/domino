@@ -318,6 +318,19 @@
     box-shadow 0.15s ease;
 }
 
+/* Colocación rechazada: el fantasma vuelve deslizándose hasta la ficha oculta
+   de la mano. DRAG_RETURN_MS en Game.tsx deja un pequeño margen sobre estos
+   220 ms antes de revelar la ficha real. */
+.drag-ghost.drag-ghost-returning {
+  transition: left 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    top 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.drag-ghost.drag-ghost-returning .domino-tile {
+  transition: width 220ms ease, height 220ms ease, transform 0.08s ease,
+    box-shadow 0.15s ease;
+}
+
 .domino-tile .tile-svg {
   pointer-events: none;
 }
