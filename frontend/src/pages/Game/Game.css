@@ -48,6 +48,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+
+  position: fixed;
+  width:-webkit-fill-available;
+  padding-right: 20px;
 }
 
 .game-room {
@@ -58,7 +62,7 @@
 
 .game-room-label {
   color: var(--text-dim);
-  font-size: 0.75rem;
+  font-size: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
@@ -89,7 +93,7 @@
 
 .game-scoreboard-label {
   color: var(--text-dim);
-  font-size: 0.68rem;
+  font-size: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
@@ -98,7 +102,7 @@
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  font-size: 1.3rem;
+  font-size: 1.6rem;
 }
 
 .game-score-dot {
@@ -139,6 +143,7 @@
 .game-room-code {
   font-weight: 700;
   letter-spacing: 0.2em;
+  font-size: 1.2rem;
   color: var(--accent);
 }
 

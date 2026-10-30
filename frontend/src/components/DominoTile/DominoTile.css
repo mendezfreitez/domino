@@ -10,13 +10,17 @@
 }
 
 .domino-tile.size-hand.orientation-vertical {
-  width: 56px;
-  height: 112px;
+  /* width: 56px;
+  height: 112px; */
+  width: 63px;
+  height: 123px;
 }
 
 .domino-tile.size-hand.orientation-horizontal {
-  width: 112px;
-  height: 56px;
+  /* width: 112px;
+  height: 56px; */
+  width: 123px;
+  height: 63px;
 }
 
 .domino-tile.size-board.orientation-horizontal {

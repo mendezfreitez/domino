@@ -1,13 +1,13 @@
 .player-hand {
   display: flex;
-  gap: 15px;
+  gap: 20px;
   justify-content: center;
   flex-wrap: wrap;
   max-width: 100%;
   padding: 7px;
   min-height: 130px;
   align-content: flex-start;
-  width: 536px;
+  width: 580;
 }
 
 .player-hand.tuTurno, .player-card.current {
