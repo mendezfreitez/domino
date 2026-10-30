@@ -95,7 +95,7 @@ export interface ChainBuilder {
 
 export const DEFAULT_CONFIG: BoardConfig = {
   // 6 fichas contadas en cada lado: la 7ª que se coloque en ese lado cruza.
-  turnLimitPerSide: 6,
+  turnLimitPerSide: 5,
   // El tramo vertical intenta el 2º giro con, como mínimo, cruce + 1 recta
   // (2 fichas contadas); la 3ª del tramo es la que reorienta si hay hueco.
   reorientLimit: 1,
