@@ -4,7 +4,7 @@ import "./DominoTile.css";
 
 type Orientation = "vertical" | "horizontal";
 
-const HALF = 72;
+const HALF = 64;
 const PADDING = 14;
 const STEP = (HALF - 2 * PADDING) / 2;
 const DOT_RADIUS = 6.5;

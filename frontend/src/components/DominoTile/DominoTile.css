@@ -9,6 +9,13 @@
   transition: transform 0.08s ease, box-shadow 0.15s ease;
 }
 
+.reveal-tile >.domino-tile.size-hand.orientation-vertical {
+  /* width: 56px;
+  height: 112px; */
+  width: 83px;
+  height: 153px;
+}
+
 .domino-tile.size-hand.orientation-vertical {
   /* width: 56px;
   height: 112px; */
