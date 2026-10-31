@@ -36,6 +36,10 @@
   box-shadow: var(--shadow);
 }
 
+.home-card button, .primary.lobby-start {
+  font-size: 1.2rem !important;
+}
+
 .home-label {
   font-size: 0.9rem;
   color: var(--text-dim);

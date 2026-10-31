@@ -632,6 +632,7 @@ body.domino-dragging {
 }
 
 
+
 @media (max-width: 640px) {
   .game-table {
     grid-template-columns: minmax(60px, 70px) minmax(0, 1fr) minmax(60px, 70px);
