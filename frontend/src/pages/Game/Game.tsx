@@ -18,6 +18,11 @@ const ZOOM = 1.03;
 const MIN_SCALE = 0.25;
 /** Duración de la vuelta del fantasma a la mano (algo mayor que la transición CSS). */
 const DRAG_RETURN_MS = 240;
+/**
+ * Margen extra alrededor de la zona visible para aceptar el soltado.
+ * Se mide en anchos de la zona: 1 = una zona más allá de su borde.
+ */
+const DROP_ZONE_TOLERANCE_WIDTHS = 1.5;
 
 // Distancia de un punto (px de viewport) a un rectángulo: 0 si está dentro,
 // si no, distancia al borde o esquina más cercana.
@@ -39,9 +44,8 @@ interface DropZone {
 /**
  * Zona de colocación bajo el punto, con la misma tolerancia que se usa al
  * soltar: primero respeta el hit-test real y, si no hay zona debajo, acepta la
- * más cercana dentro de cuatro anchos de zona. Así el fantasma se orienta en
- * cuanto el gesto cae en el área soltable, no solo al entrar en el rectángulo
- * visible de la zona.
+ * más cercana dentro de un ancho de zona. Así el fantasma se orienta al acercar
+ * el gesto al área soltable, no solo al entrar en su rectángulo visible.
  */
 function findDropZone(x: number, y: number): DropZone | null {
   const hit = document.elementFromPoint(x, y);
@@ -63,8 +67,10 @@ function findDropZone(x: number, y: number): DropZone | null {
   )) {
     const rect = candidate.getBoundingClientRect();
     const dist = distanceToRect(x, y, rect);
-    // 4 × rect.width = cuatro anchos de zona en píxeles reales.
-    if (dist <= rect.width * 4 && dist < bestDist) {
+    if (
+      dist <= rect.width * DROP_ZONE_TOLERANCE_WIDTHS &&
+      dist < bestDist
+    ) {
       bestDist = dist;
       best = candidate;
     }
