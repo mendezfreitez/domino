@@ -286,7 +286,7 @@
   align-items: center;
 }
 
-.pass-modal button{
+.pass-modal button, .reveal-modal button{
   font-size: 1.8rem!important;
   padding: 10px 44px;
 }
@@ -459,6 +459,7 @@ body.domino-dragging {
   align-items: center;
   gap: 0.7rem;
   animation: pass-pop 0.25s ease;
+  min-width: 35%;
 }
 
 .reveal-title {
