@@ -473,7 +473,7 @@ body.domino-dragging {
   margin: 0;
   color: var(--text-dim);
   font-size: 1.4rem;
-  line-height: 15px;
+  line-height: 34px;
 }
 
 .reveal-list {
