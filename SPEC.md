@@ -380,6 +380,7 @@ interface GameState {
     winnerId: string | null;
     winnerTeam: number | null;
     winnerReason: "empty-hand" | "blocked" | "player-left" | null;
+    abandonedPlayer: Player | null;       // quién se fue (ya no está en players)
     blockedById: string | null;
     teamScores: [number, number];
     roundNumber: number;
@@ -1044,6 +1045,10 @@ round-over ──(start_next_round, cualquier jugador)──► playing         
   dentro del plazo, la partida continúa donde estaba. Si el plazo se agota, o si el
   jugador pulsa abandonar, entonces sí: la ronda pasa a `finished` con razón
   `player-left`, sin ofrecer "Siguiente ronda".
+* El botón **Abandonar** pide confirmación antes de enviar `leave_game`. Al
+  confirmarse, el resultado muestra quién abandonó y nombra a los dos jugadores
+  del equipo contrario como ganadores; no revela las fichas restantes ni ofrece
+  el conteo de fichas.
 
 ---
 

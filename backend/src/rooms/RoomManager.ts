@@ -401,6 +401,7 @@ export class RoomManager {
           winnerId: null,
           winnerTeam: null,
           winnerReason: null,
+          abandonedPlayer: null,
           blockedById: null,
           teamScores: [0, 0] as [number, number],
           roundNumber: 0,

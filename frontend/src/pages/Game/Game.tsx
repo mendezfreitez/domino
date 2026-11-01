@@ -133,6 +133,7 @@ export function Game({
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
   const [dragReturning, setDragReturning] = useState<boolean>(false);
   const [showResult, setShowResult] = useState<boolean>(true);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState<boolean>(false);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState<number>(1);
   const scaleRef = useRef<number>(scale);
@@ -465,6 +466,7 @@ export function Game({
   const currentPlayer = state.players.find((p) => p.id === state.currentPlayer);
   const winner = state.players.find((p) => p.id === (result?.winnerId ?? state.winnerId));
   const winnerTeam = result?.winnerTeam ?? state.winnerTeam;
+  const abandonedPlayer = state.abandonedPlayer ?? null;
 
   // Asientos relativos a cada jugador: tú estás abajo (tu propia mano),
   // tu compañero arriba y los dos rivales a los costados. La mesa es una
@@ -518,9 +520,40 @@ export function Game({
   const finishedReason = result?.winnerReason ?? state.winnerReason;
   const isRoundOver = state.status === "round-over";
   const isFinished = state.status === "finished";
+  const isPlayerLeft = finishedReason === "player-left";
   const blocker = state.players.find(
     (p) => p.id === (result?.blockedById ?? state.blockedById)
   );
+
+  // El abandono no usa el modal de conteo: solo interesa quién se fue y qué
+  // equipo gana. El equipo ganador se guarda en el estado; si falta (registro
+  // antiguo), se deduce del jugador que abandonó o del roster restante.
+  const playerLeftWinningTeam = (() => {
+    if (abandonedPlayer !== null) return 1 - abandonedPlayer.team;
+    if (winnerTeam !== null) return winnerTeam;
+    const counts = new Map<number, number>();
+    for (const player of state.players) {
+      counts.set(player.team, (counts.get(player.team) ?? 0) + 1);
+    }
+    let best: number | null = null;
+    let bestCount = -1;
+    for (const [team, count] of counts) {
+      if (count > bestCount) {
+        best = team;
+        bestCount = count;
+      }
+    }
+    return best;
+  })();
+  const playerLeftWinners =
+    playerLeftWinningTeam === null
+      ? []
+      : state.players
+          .filter((player) => player.team === playerLeftWinningTeam)
+          .sort((a, b) => a.position - b.position);
+  const playerLeftWinnersLabel = playerLeftWinners
+    .map((player) => player.name)
+    .join(" y ");
 
   // Fin del match por puntos. Se lee del estado y no solo del evento
   // `game_finished` para que el modal también aparezca al recargar la página
@@ -618,7 +651,10 @@ const estadoPartida = (state: any) => {
                 <span className="game-room-label">Sala</span>
                 <span className="game-room-code">{state.roomId}</span>
               </div>
-              <button className="game-leave" onClick={onLeave}>
+              <button
+                className="game-leave"
+                onClick={() => setShowLeaveConfirm(true)}
+              >
                 Abandonar
               </button>
             </div>
@@ -648,21 +684,50 @@ const estadoPartida = (state: any) => {
                 dropRightValid={dropRightValid}
                 onDropTile={handleDrop}
                 estadoPartida={estadoPartida(state)}
+                starterName={currentPlayer?.name ?? "el jugador inicial"}
               />
             </main>
           </section>
 
-          {(isRoundOver || isFinished) && showResult && (
+          {isPlayerLeft && (
+            <div className="reveal-overlay" role="dialog" aria-modal="true">
+              <div className="reveal-modal player-left-modal">
+                <h2 className="reveal-title">Partida terminada</h2>
+                <p className="reveal-subtitle player-left-message">
+                  <strong>{abandonedPlayer?.name ?? "Un jugador"}</strong>{" "}
+                  abandonó la partida.
+                </p>
+                {playerLeftWinners.length > 0 ? (
+                  <p className="reveal-subtitle player-left-message">
+                    Por tanto,{" "}
+                    <strong>{playerLeftWinnersLabel}</strong>{" "}
+                    {playerLeftWinners.length === 1 ? "gana" : "ganan"} la
+                    partida.
+                  </p>
+                ) : (
+                  <p className="reveal-subtitle player-left-message">
+                    Por tanto, gana el equipo contrario.
+                  </p>
+                )}
+                <button
+                  className="primary player-left-leave"
+                  onClick={onLeave}
+                >
+                  SALIR
+                </button>
+              </div>
+            </div>
+          )}
+
+          {(isRoundOver || isFinished) && showResult && !isPlayerLeft && (
             <div className="reveal-overlay" role="dialog" aria-modal="true">
               <div className="reveal-modal">
                 <h2 className="reveal-title">
                   {isMatchOver
                     ? "¡Partida finalizada!"
-                    : finishedReason === "player-left"
-                      ? "Partida terminada"
-                      : isFinished
-                        ? "¡Partida terminada!"
-                        : `Ronda ${state.roundNumber} terminada`}
+                    : isFinished
+                      ? "¡Partida terminada!"
+                      : `Ronda ${state.roundNumber} terminada`}
                 </h2>
 
                 {isMatchOver ? (
@@ -703,9 +768,7 @@ const estadoPartida = (state: any) => {
                   </>
                 ) : (
                   <p className="reveal-subtitle">
-                    {finishedReason === "player-left" ? (
-                      <>Un jugador abandonó la partida. Juego terminado.</>
-                    ) : finishedReason === "blocked" ? (
+                    {finishedReason === "blocked" ? (
                       <>
                         <strong style={{paddingTop:"4px"}}>{blocker?.name.toUpperCase() ?? "…"}</strong> trancó la{" "}
                         {isFinished ? "partida" : "ronda"}
@@ -741,7 +804,7 @@ const estadoPartida = (state: any) => {
             </div>
           )}
 
-          {(isRoundOver || isFinished) && !showResult && (
+          {(isRoundOver || isFinished) && !showResult && !isPlayerLeft && (
             <div className="reveal-overlay" role="dialog" aria-modal="true">
               <div className="reveal-modal">
                 <h2 className="reveal-title">Conteo de fichas</h2>
@@ -847,6 +910,37 @@ const estadoPartida = (state: any) => {
                 <p>
                   Jugador <strong>{lastPass.name}</strong> ha pasado
                 </p>
+              </div>
+            </div>
+          )}
+
+          {showLeaveConfirm && (
+            <div
+              className="pass-modal-overlay leave-confirm-overlay"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="pass-modal leave-confirm-modal">
+                <p className="leave-confirm-title">
+                  ¿Seguro que quieres abandonar la partida?
+                </p>
+                <span className="leave-confirm-note">
+                  Si confirmas, el equipo contrario sera el ganador.
+                </span>
+                <div className="leave-confirm-actions">
+                  <button onClick={() => setShowLeaveConfirm(false)}>
+                    Cancelar
+                  </button>
+                  <button
+                    className="game-leave leave-confirm-danger"
+                    onClick={() => {
+                      setShowLeaveConfirm(false);
+                      onLeave();
+                    }}
+                  >
+                    Abandonar
+                  </button>
+                </div>
               </div>
             </div>
           )}

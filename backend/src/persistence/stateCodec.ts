@@ -128,8 +128,7 @@ function parseTiles(roomId: string, value: unknown, what: string): DominoTile[] 
   return list.map((tile, index) => parseTile(roomId, tile, `${what}[${index}]`));
 }
 
-function parsePlayer(roomId: string, value: unknown, index: number): Player {
-  const what = `players[${index}]`;
+function parsePlayer(roomId: string, value: unknown, what: string): Player {
   const raw = asRecord(roomId, value, what);
   const id = asString(roomId, raw.id, `${what}.id`);
   if (id.length === 0) fail(roomId, `${what}.id está vacío.`);
@@ -220,7 +219,7 @@ export function deserializeGameState(roomId: string, json: string): GameState {
   }
 
   const players = asArray(roomId, raw.players, "players").map((player, index) =>
-    parsePlayer(roomId, player, index)
+    parsePlayer(roomId, player, `players[${index}]`)
   );
   if (players.length > MAX_PLAYERS) {
     fail(roomId, "hay demasiados jugadores en la partida.");
@@ -228,6 +227,19 @@ export function deserializeGameState(roomId: string, json: string): GameState {
   const playerIds = new Set(players.map((player) => player.id));
   if (playerIds.size !== players.length) {
     fail(roomId, "hay jugadores duplicados en la partida.");
+  }
+
+  // El jugador que abandonó ya no está en `players`; se guarda aparte para que
+  // el resultado pueda nombrarlo también después de rehidratar la partida.
+  const abandonedPlayer =
+    raw.abandonedPlayer === undefined || raw.abandonedPlayer === null
+      ? null
+      : parsePlayer(roomId, raw.abandonedPlayer, "abandonedPlayer");
+  if (abandonedPlayer !== null && playerIds.has(abandonedPlayer.id)) {
+    fail(
+      roomId,
+      `abandonedPlayer (${abandonedPlayer.id}) sigue en la partida.`
+    );
   }
 
   const hands: Record<string, DominoTile[]> = {};
@@ -361,6 +373,7 @@ export function deserializeGameState(roomId: string, json: string): GameState {
     winnerId,
     winnerTeam: winnerTeam as number | null,
     winnerReason: parseWinnerReason(roomId, raw.winnerReason),
+    abandonedPlayer,
     blockedById,
     teamScores: parseScorePair(roomId, raw.teamScores ?? [0, 0]),
     roundNumber,

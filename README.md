@@ -72,7 +72,9 @@ mismo funciona tras reiniciar el servidor, porque la partida está en SQLite.
 Cerrar la pestaña o perder cobertura **no** abandona la partida: el jugador
 sigue en la mesa durante la ventana de gracia (`RECONNECT_GRACE_MS`, 45 s por
 defecto) y los demás ven que está esperando. El botón **Abandonar** sí es
-definitivo y no espera ese plazo.
+definitivo y no espera ese plazo; pide confirmación y, al confirmarse, el resto
+ve quién abandonó y que gana el equipo contrario, sin mostrar las fichas
+restantes.
 
 ## Jugar en red local (WiFi)
 

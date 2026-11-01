@@ -47,6 +47,7 @@ export class DominoGame {
       winnerId: null,
       winnerTeam: null,
       winnerReason: null,
+      abandonedPlayer: null,
       blockedById: null,
       teamScores: [0, 0],
       roundNumber: 0,
@@ -188,6 +189,7 @@ export class DominoGame {
     this.state.winnerId = null;
     this.state.winnerTeam = null;
     this.state.winnerReason = null;
+    this.state.abandonedPlayer = null;
     this.state.blockedById = null;
     this.state.currentPlayer = this.state.currentStarterId;
     this.state.readyForNextRound = [];
@@ -343,13 +345,18 @@ export class DominoGame {
     }
   }
 
-  finishBecausePlayerLeft(): void {
+  finishBecausePlayerLeft(leftPlayer: Player | null = null): void {
     this.state.winnerId = null;
-    this.state.winnerTeam = null;
+    // El equipo contrario al que abandona es el ganador de la partida. Se
+    // guarda para que el resultado siga siendo explicable tras una recarga.
+    this.state.winnerTeam =
+      leftPlayer === null ? null : 1 - leftPlayer.team;
     this.state.winnerReason = "player-left";
+    this.state.abandonedPlayer = leftPlayer;
     this.state.blockedById = null;
     this.state.matchWinnerTeam = null;
     this.state.currentPlayer = null;
+    this.state.readyForNextRound = [];
     this.state.status = "finished";
   }
 
@@ -409,6 +416,7 @@ export class DominoGame {
       winnerId: this.state.winnerId,
       winnerTeam: this.state.winnerTeam,
       winnerReason: this.state.winnerReason,
+      abandonedPlayer: this.state.abandonedPlayer,
       blockedById: this.state.blockedById,
       yourPlayerId: playerId,
       yourHand: this.state.hands[playerId] ?? [],

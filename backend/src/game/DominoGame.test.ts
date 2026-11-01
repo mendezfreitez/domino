@@ -415,9 +415,16 @@ console.log("--- Abandono durante la partida ---");
 
 const r4 = new DominoGame("R4", makePlayers());
 r4.start();
-r4.finishBecausePlayerLeft();
+const leaver = r4.state.players[0];
+r4.removePlayer(leaver.id);
+r4.finishBecausePlayerLeft(leaver);
 assert(r4.state.status === "finished", "un jugador que se va termina la partida");
 assert(r4.state.winnerReason === "player-left", "la razón es player-left");
+assert(r4.state.winnerTeam === 1 - leaver.team, "gana el equipo contrario al que abandona");
+assert(
+  r4.state.abandonedPlayer?.id === leaver.id,
+  "se conserva quién abandonó la partida"
+);
 assert(r4.state.matchWinnerTeam === null, "sin ganador de match cuando alguien se va");
 assert(r4.state.currentPlayer === null, "no queda turno activo");
 

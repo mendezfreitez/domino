@@ -276,7 +276,7 @@
 .pass-modal {
   background: var(--bg-panel);
   border: 1px solid var(--accent-soft);
-  border-radius: 14px;
+  border-radius: 24px;
   padding: 1rem 1.2rem;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   animation: pass-pop 0.25s ease;
@@ -296,6 +296,60 @@
   color: var(--accent);
   font-size: 1.3em;
   font-weight: 700;
+}
+
+/* Confirmación antes de abandonar: es una acción destructiva, así que tapa
+   cualquier otro modal de la mesa (incluido el de "paso" o el de resultado). */
+.leave-confirm-overlay {
+  z-index: 70;
+}
+
+.leave-confirm-modal {
+  max-width: 560px;
+  text-align: center;
+}
+
+.leave-confirm-title {
+  line-height: 1.25;
+}
+
+.leave-confirm-note {
+  color: var(--text-dim);
+  font-size: 1.3rem;
+  text-align: center;
+}
+
+.leave-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.leave-confirm-actions>button {
+  padding: 0.55rem 1.4rem !important;
+}
+
+/* Resultado por abandono: no se revelan fichas, solo quién se fue y qué
+   jugadores del equipo contrario ganan. */
+.player-left-modal {
+  max-width: 720px;
+  text-align: center;
+  gap: 1rem;
+}
+
+.player-left-message {
+  font-size: 1.7rem;
+  line-height: 1.4;
+}
+
+.player-left-message strong {
+  color: var(--accent);
+}
+
+.player-left-leave {
+  margin-top: 12px;
 }
 
 @keyframes pass-pop {

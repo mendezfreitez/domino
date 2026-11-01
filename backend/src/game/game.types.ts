@@ -44,6 +44,12 @@ export interface GameState {
   winnerId: string | null;
   winnerTeam: number | null;
   winnerReason: WinnerReason | null;
+  /**
+   * Jugador que abandonó la partida. El roster de `players` ya no lo incluye,
+   * pero se conserva aquí para poder explicar el resultado al resto de la mesa
+   * (y también después de recargar la página).
+   */
+  abandonedPlayer: Player | null;
   blockedById: string | null;
   teamScores: [number, number];
   roundNumber: number;
@@ -69,6 +75,7 @@ export interface PublicGameState {
   winnerId: string | null;
   winnerTeam: number | null;
   winnerReason: WinnerReason | null;
+  abandonedPlayer: Player | null;
   blockedById: string | null;
   yourPlayerId: string;
   yourHand: DominoTile[];

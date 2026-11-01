@@ -773,13 +773,24 @@ async function main(): Promise<void> {
     await Promise.all(pStarted);
     await wait(200);
 
-    const pBye = onceEvent<{ explicit: boolean }>(pClients[0].client, "player_left");
+    const pBye = onceEvent<{
+      player: { id: string; team: number };
+      explicit: boolean;
+    }>(pClients[0].client, "player_left");
     pClients[1].client.emit("leave_game");
     const explicit = await pBye;
     assert(explicit.explicit, "el botón de abandonar se aplica al instante");
     assert(
       (await waitFor(() => pClients[0].state?.status === "finished", 3000)),
       "abandonar durante la partida la termina"
+    );
+    assert(
+      pClients[0].state?.abandonedPlayer?.id === explicit.player.id,
+      "el estado identifica a quien abandonó la partida"
+    );
+    assert(
+      pClients[0].state?.winnerTeam === 1 - explicit.player.team,
+      "el equipo contrario figura como ganador"
     );
     for (const s of pClients) s.client.close();
 

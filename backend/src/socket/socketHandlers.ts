@@ -204,10 +204,15 @@ export function registerSocketHandlers(
       const game = result.room.game;
       if (!game) return;
 
-      if (game.state.status === "playing") {
+      // Abandonar también termina el match entre rondas (`round-over`): el
+      // jugador se está yendo de la partida, no solo de la ronda en curso.
+      if (
+        game.state.status === "playing" ||
+        game.state.status === "round-over"
+      ) {
         try {
           roomManager.commit(result.room, () => {
-            game.finishBecausePlayerLeft();
+            game.finishBecausePlayerLeft(result.player);
           });
         } catch (error) {
           console.error("[persistencia] No se pudo registrar el abandono:", error);

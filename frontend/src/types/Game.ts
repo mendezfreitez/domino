@@ -20,6 +20,8 @@ export interface PublicGameState {
   winnerId: string | null;
   winnerTeam: number | null;
   winnerReason: WinnerReason | null;
+  /** Jugador que abandonó la partida; ya no aparece en `players`. */
+  abandonedPlayer: Player | null;
   blockedById: string | null;
   yourPlayerId: string;
   yourHand: DominoTile[];

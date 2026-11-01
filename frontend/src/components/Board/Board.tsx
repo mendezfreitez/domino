@@ -118,6 +118,8 @@ interface BoardProps {
   dropRightValid: boolean;
   onDropTile: (tileId: string, side: "left" | "right") => void;
   estadoPartida: string;
+  /** Nombre del jugador al que le corresponde abrir la ronda. */
+  starterName: string;
 }
 
 function dropHandlers(
@@ -184,6 +186,7 @@ export function Board({
   dropRightValid,
   onDropTile,
   estadoPartida,
+  starterName,
 }: BoardProps) {
   const boardRef = useRef<HTMLDivElement | null>(null);
   const builderRef = useRef<ChainBuilder | null>(null);
@@ -416,7 +419,10 @@ export function Board({
         data-drop-side="left"
         {...dropHandlers("left", onDropTile)}
       >
-        <p>El tablero está vacío. Arrastra una ficha aquí.</p>
+        <p>
+          Esperando a que <strong>{starterName}</strong> coloque la primera
+          ficha.
+        </p>
       </div>
     );
   }

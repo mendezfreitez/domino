@@ -181,6 +181,30 @@ try {
     "el estado recuperado no comparte objetos con el original"
   );
 
+  console.log("--- Abandono persistido ---");
+
+  const abandonedGame = new DominoGame("ABCDE", makePlayers());
+  abandonedGame.start();
+  const abandoner = abandonedGame.state.players[0];
+  abandonedGame.removePlayer(abandoner.id);
+  abandonedGame.finishBecausePlayerLeft(abandoner);
+  const restoredAbandon = deserializeGameState(
+    "ABCDE",
+    serializeGameState(abandonedGame.snapshot())
+  );
+  assert(
+    restoredAbandon.abandonedPlayer?.id === abandoner.id,
+    "se recupera quién abandonó la partida"
+  );
+  assert(
+    restoredAbandon.winnerTeam === 1 - abandoner.team,
+    "se recupera el equipo ganador por abandono"
+  );
+  assert(
+    !restoredAbandon.players.some((player) => player.id === abandoner.id),
+    "el jugador que abandonó no vuelve al roster al rehidratar"
+  );
+
   console.log("--- Estado corrupto ---");
 
   assertThrows(
